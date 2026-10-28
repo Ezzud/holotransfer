@@ -5,9 +5,11 @@
   "scripts": {
     "dev": "concurrently \"pnpm --filter api dev\" \"pnpm --filter web dev\"",
     "build": "pnpm --recursive build",
+    "start": "node scripts/start.mjs",
     "typecheck": "pnpm --recursive typecheck"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "serve": "^14.2.4"
   }
 }
