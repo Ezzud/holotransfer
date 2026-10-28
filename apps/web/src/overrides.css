@@ -179,19 +179,20 @@
 
   .code-input {
     width: 100%;
-    gap: 2px;
+    gap: 5px;
     margin: 18px auto 22px;
+    flex-wrap: nowrap;
   }
 
   .code-slot-wrap {
-    gap: 2px;
-    flex: 1 1 0;
-    justify-content: center;
+    display: flex;
+    flex: none;
+    gap: 3px;
   }
 
   .code-input input {
-    width: auto;
-    flex: 1 1 0;
+    width: 27px;
+    flex: none;
     height: 42px;
     min-width: 0;
     font-size: 18px;
@@ -199,7 +200,7 @@
 
   .code-slot-wrap b {
     font-size: 14px;
-    margin: 0 1px;
+    margin: 0;
   }
 
   .button,
@@ -333,6 +334,7 @@
   }
 
   .code-input input {
+    width: 23px;
     height: 38px;
     font-size: 16px;
   }
