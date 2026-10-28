@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.pnpm-store/
+*.tsbuildinfo
+apps/api/data/
+.env
+!.env.example
