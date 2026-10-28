@@ -21,7 +21,7 @@ function normalizePath(value: string): string {
  * API runtime configuration.
  */
 export const config = {
-  host: process.env.HOST ?? '127.0.0.1',
+  host: process.env.HOST ?? '0.0.0.0',
   port: Number(process.env.PORT ?? 43827),
   apiPrefix: normalizePath(process.env.API_PREFIX ?? '/api'),
   websocketPath: normalizePath(process.env.WS_PATH ?? '/transfer'),
