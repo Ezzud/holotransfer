@@ -38,7 +38,13 @@ const websocketServer = new WebSocketServer({ server: httpServer, path: config.w
  */
 function configureHttp(): void {
   app.use(cors({
-    origin: config.allowedOrigins.length > 0 ? config.allowedOrigins : true
+    origin: (requestOrigin, callback) => {
+      if (!requestOrigin || config.allowedOrigins.includes(requestOrigin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Origin is not allowed by CORS'));
+    }
   }));
   app.use(express.json({ limit: '16kb' }));
   app.use(createRateLimiter(120));
