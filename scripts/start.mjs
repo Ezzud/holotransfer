@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 
 const root = new URL('../', import.meta.url);
@@ -36,10 +36,4 @@ const frontendPort = process.env.VITE_PORT ?? readWebEnv('VITE_PORT') ?? '51739'
 
 run('pnpm', ['build']);
 run('screen', ['-dmS', 'api-transfer', 'node', 'apps/api/dist/server.js']);
-
-const frontend = spawn('pnpm', ['exec', 'serve', '-s', 'apps/web/dist', '-l', frontendPort], {
-  stdio: 'inherit',
-  shell: process.platform === 'win32'
-});
-
-frontend.on('exit', (code) => process.exit(code ?? 0));
+run('screen', ['-dmS', 'website-transfer', 'pnpm', 'exec', 'serve', '-s', 'apps/web/dist', '-l', frontendPort]);
