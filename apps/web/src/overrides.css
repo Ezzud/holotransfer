@@ -79,11 +79,260 @@
 }
 
 @media (max-width: 600px) {
+  header {
+    height: 64px;
+    padding: 0 16px;
+  }
+
+  nav {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 2px;
+  }
+
+  .sponsor {
+    padding: 9px 12px;
+    font-size: 12px;
+    margin-right: 4px;
+  }
+
+  .icon-btn {
+    padding: 8px;
+  }
+
+  .hero {
+    padding: 42px 20px 30px;
+  }
+
+  .hero-brand {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 {
+    font-size: 42px;
+    letter-spacing: -2px;
+  }
+
+  .hero p {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .action-grid {
+    width: calc(100% - 28px);
+    gap: 12px;
+  }
+
+  .action-card {
+    min-height: 92px;
+    padding: 18px 16px;
+    gap: 12px;
+    border-radius: 14px;
+  }
+
+  .action-card h2 {
+    font-size: 16px;
+  }
+
+  .action-card p {
+    font-size: 12px;
+  }
+
+  .trust {
+    margin: 26px 20px 18px;
+    gap: 9px;
+    font-size: 11px;
+  }
+
+  .card {
+    width: calc(100% - 28px);
+    margin: 28px auto 0;
+    padding: 58px 18px 24px;
+    border-radius: 16px;
+  }
+
+  .card h2 {
+    font-size: 23px;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 22px;
+  }
+
+  .back {
+    left: 16px;
+    top: 16px;
+    font-size: 13px;
+  }
+
+  .code {
+    font-size: 23px;
+    letter-spacing: 3px;
+    margin: 14px 0 22px;
+  }
+
+  .code-input {
+    width: 100%;
+    gap: 2px;
+    margin: 18px auto 22px;
+  }
+
+  .code-slot-wrap {
+    gap: 2px;
+    flex: 1 1 0;
+  }
+
+  .code-input input {
+    width: 100%;
+    height: 42px;
+    min-width: 0;
+    font-size: 18px;
+  }
+
+  .code-slot-wrap b {
+    font-size: 14px;
+    margin: 0 1px;
+  }
+
+  .button,
+  .button-row .button {
+    min-height: 46px;
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+
+  .button-row,
+  .done-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .file-summary {
+    margin: 18px 0;
+    padding: 12px;
+  }
+
+  .drop-zone {
+    padding: 30px 14px;
+    margin: 16px 0 18px;
+    text-align: center;
+  }
+
+  .progress-meta {
+    font-size: 11px;
+  }
+
+  .waiting-confirmation {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .success-panel {
+    padding: 12px;
+  }
+
+  .success strong {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  footer {
+    padding: 22px 18px;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .overlay {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 18px 18px 12px 12px;
+    padding: 26px 20px 24px;
+  }
+
+  .setting-row {
+    align-items: flex-start;
+  }
+
   .legal-page {
-    padding: 28px 14px 48px;
+    padding: 20px 12px 34px;
   }
 
   .legal-content {
-    padding: 26px 20px 38px;
+    padding: 22px 16px 30px;
+    border-radius: 15px;
+  }
+
+  .legal-back {
+    margin-bottom: 24px;
+  }
+
+  .legal-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .legal-heading .brand-mark {
+    padding: 7px;
+  }
+
+  .legal-heading h1 {
+    font-size: 30px;
+    line-height: 1.1;
+  }
+
+  .legal-updated {
+    margin: 14px 0 26px;
+  }
+
+  .legal-sections {
+    gap: 20px;
+  }
+
+  .legal-sections section {
+    padding-top: 18px;
+  }
+
+  .legal-sections h2 {
+    font-size: 16px;
+  }
+
+  .legal-sections p {
+    font-size: 13px;
+    line-height: 1.65;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero h1 {
+    font-size: 36px;
+  }
+
+  .trust {
+    align-items: flex-start;
+  }
+
+  .trust span {
+    align-items: flex-start;
+  }
+
+  .code-input input {
+    height: 38px;
+    font-size: 16px;
+  }
+
+  .code-slot-wrap b {
+    font-size: 12px;
   }
 }
