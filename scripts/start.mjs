@@ -32,8 +32,19 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+/**
+ * Stops an existing named screen session when present.
+ * @param name Screen session name.
+ * @returns Nothing.
+ */
+function stopScreen(name) {
+  spawnSync('screen', ['-S', name, '-X', 'quit'], { stdio: 'ignore', shell: process.platform === 'win32' });
+}
+
 const frontendPort = process.env.VITE_PORT ?? readWebEnv('VITE_PORT') ?? '51739';
 
 run('pnpm', ['build']);
+stopScreen('api-transfer');
+stopScreen('website-transfer');
 run('screen', ['-dmS', 'api-transfer', 'node', 'apps/api/dist/server.js']);
 run('screen', ['-dmS', 'website-transfer', 'pnpm', 'exec', 'serve', '-s', 'apps/web/dist', '-l', frontendPort]);
