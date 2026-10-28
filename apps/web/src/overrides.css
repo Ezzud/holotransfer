@@ -143,6 +143,8 @@
     margin: 26px 20px 18px;
     gap: 9px;
     font-size: 11px;
+    align-items: center;
+    text-align: center;
   }
 
   .card {
@@ -184,10 +186,12 @@
   .code-slot-wrap {
     gap: 2px;
     flex: 1 1 0;
+    justify-content: center;
   }
 
   .code-input input {
-    width: 100%;
+    width: auto;
+    flex: 1 1 0;
     height: 42px;
     min-width: 0;
     font-size: 18px;
@@ -250,7 +254,7 @@
   }
 
   .overlay {
-    align-items: end;
+    align-items: center;
     padding: 10px;
   }
 
@@ -320,11 +324,12 @@
   }
 
   .trust {
-    align-items: flex-start;
+    align-items: center;
   }
 
   .trust span {
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
   }
 
   .code-input input {

@@ -32,5 +32,5 @@ export function CodeInput({ value, onChange }: { value: string; onChange: (value
     if (event.key === 'Backspace' && !characters[index] && index > 0) inputRefs.current[index - 1]?.focus();
   }
 
-  return <div className="code-input" aria-label="Transfer code">{characters.map((character, index) => <span className="code-slot-wrap" key={index}><input ref={(element) => { inputRefs.current[index] = element; }} value={character} maxLength={1} inputMode="text" onChange={(event) => updateSlot(index, event.target.value)} onKeyDown={(event) => handleKeyDown(index, event)} aria-label={`Code character ${index + 1}`} />{index === 1 || index === 3 || index === 5 || index === 7 ? <b>-</b> : null}</span>)}</div>;
+  return <div className="code-input" aria-label="Transfer code">{Array.from({ length: 5 }, (_, groupIndex) => <span className="code-slot-wrap" key={groupIndex}>{[0, 1].map((offset) => { const index = groupIndex * 2 + offset; return <input key={index} ref={(element) => { inputRefs.current[index] = element; }} value={characters[index]} maxLength={1} inputMode="text" onChange={(event) => updateSlot(index, event.target.value)} onKeyDown={(event) => handleKeyDown(index, event)} aria-label={`Code character ${index + 1}`} />; })}{groupIndex < 4 ? <b>-</b> : null}</span>)}</div>;
 }
