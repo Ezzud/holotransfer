@@ -29,6 +29,7 @@ const createController = createTransferController(manager, clientManager);
 const joinController = joinTransferController(manager, clientManager);
 const clientController = createClientController(clientManager);
 const app = express();
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 const websocketServer = new WebSocketServer({ server: httpServer, path: config.websocketPath });
 const socketHealth = new WeakMap<WebSocket, boolean>();
