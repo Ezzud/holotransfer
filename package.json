@@ -1,7 +1,7 @@
 {
   "name": "holotransfer",
   "private": true,
-  "version": "0.1.5",
+  "version": "0.1.6",
   "packageManager": "pnpm@10.12.1",
   "scripts": {
     "api:dev": "pnpm --filter @holotransfer/api dev",

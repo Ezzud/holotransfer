@@ -92,6 +92,7 @@ export function App() {
   const transferStartedAt = useRef<number | null>(null);
   const transferredBytes = useRef(0);
   const downloadWriter = useRef<FileSystemWritableFileStream | null>(null);
+  const nativeSavePath = useRef<string | null>(null);
   const downloadWriteQueue = useRef(Promise.resolve());
   const receiveChunkQueue = useRef(Promise.resolve());
   const encryptionKeyPair = useRef<CryptoKeyPair | null>(null);
@@ -243,6 +244,7 @@ export function App() {
     selectedFile.current = null;
     currentFile.current = null;
     receivedChunks.current = [];
+    nativeSavePath.current = null;
     receivedBytes.current = 0;
     setCode("");
     setJoinCode("");
@@ -623,6 +625,14 @@ export function App() {
         await downloadWriter.current.close();
         downloadWriter.current = null;
         setWritingFile(false);
+      } else if (nativeSavePath.current) {
+        setWritingFile(true);
+        const { writeFile } = await import("@tauri-apps/plugin-fs");
+        const data = await new Blob(receivedChunks.current).arrayBuffer();
+        await writeFile(nativeSavePath.current, new Uint8Array(data));
+        nativeSavePath.current = null;
+        receivedChunks.current = [];
+        setWritingFile(false);
       } else {
         const url = URL.createObjectURL(
           new Blob(receivedChunks.current, { type: metadata.type }),
@@ -635,7 +645,7 @@ export function App() {
       }
     } catch (reason: unknown) {
       logger.error("Unable to prepare received file download", reason);
-      const message = "Unable to download the received file in this browser.";
+      const message = "Unable to save the received file.";
       activeSocket.send(JSON.stringify({ type: "error", message }));
       goHome(message);
       return;
@@ -747,6 +757,29 @@ export function App() {
       return;
     }
     setDecisionPending(true);
+    if (
+      accepted &&
+      role === "receiver" &&
+      currentFile.current &&
+      isTauriRuntime()
+    ) {
+      try {
+        const { save } = await import("@tauri-apps/plugin-dialog");
+        const path = await save({
+          defaultPath: currentFile.current.name,
+        });
+        if (!path) {
+          setDecisionPending(false);
+          return;
+        }
+        nativeSavePath.current = path;
+      } catch (reason: unknown) {
+        logger.error("Unable to open native file destination", reason);
+        setDecisionPending(false);
+        setError("The file destination could not be opened.");
+        return;
+      }
+    }
     const saveFilePicker = (
       window as Window & {
         showSaveFilePicker?: (options?: {
@@ -758,7 +791,8 @@ export function App() {
       accepted &&
       role === "receiver" &&
       currentFile.current &&
-      saveFilePicker
+      saveFilePicker &&
+      !isTauriRuntime()
     ) {
       try {
         const handle = await saveFilePicker({
@@ -785,7 +819,7 @@ export function App() {
       currentFile.current = null;
       setDecisionPending(false);
       setError("");
-      setStep("send-code");
+      setStep("send-file");
     }
   }
 
