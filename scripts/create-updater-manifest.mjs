@@ -1,11 +1,9 @@
 import {
-  basename,
   readdirSync,
   readFileSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 
 const assetsRoot = resolve(
   process.env.RELEASE_ASSETS_DIR ?? "release-assets",
