@@ -1,4 +1,23 @@
 import { ArrowLeft, ShieldCheck, Scale } from "lucide-react";
+import { siGithub } from "simple-icons";
+
+/**
+ * Renders the Simple Icons GitHub mark.
+ * @returns GitHub brand icon.
+ */
+function GithubIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="15"
+      height="15"
+      fill="currentColor"
+    >
+      <path d={siGithub.path} />
+    </svg>
+  );
+}
 
 /**
  * Renders a dedicated legal information page.
@@ -51,7 +70,38 @@ function PrivacyContent() {
         </p>
       </section>
       <section>
-        <h2>2. Information we process</h2>
+        <h2>2. Open-source project and official website</h2>
+        <p>
+          HoloTransfer is an open-source project. Its source code and
+          contribution history are available in the{" "}
+          <a
+            className="legal-link"
+            href="https://github.com/Ezzud/holotransfer"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span className="legal-link-icon">
+              <GithubIcon />
+            </span>{" "}
+            GitHub repository
+          </a>
+          . This policy describes how data is handled by the official hosted
+          instance, not by the software in every possible deployment.
+        </p>
+        <p>
+          The official hosted website covered by this policy is{" "}
+          <a href="https://holotransfer.app" target="_blank" rel="noreferrer">
+            holotransfer.app
+          </a>
+          . Because anyone may run a separate or modified instance, the project
+          owner has no control over and is not responsible for the privacy
+          practices, security, availability, or data handling of those other
+          instances. Review the privacy policy published by the operator of any
+          other instance you use.
+        </p>
+      </section>
+      <section>
+        <h2>3. Information we process</h2>
         <p>
           To create and validate a transfer, the service processes an
           automatically generated client identifier, a temporary transfer code,
@@ -66,7 +116,7 @@ function PrivacyContent() {
         </p>
       </section>
       <section>
-        <h2>3. File contents</h2>
+        <h2>4. File contents</h2>
         <p>
           File bytes are encrypted in the sender's browser with AES-GCM before
           they are relayed through the WebSocket server. The receiving browser
@@ -78,7 +128,7 @@ function PrivacyContent() {
         </p>
       </section>
       <section>
-        <h2>4. Transfer logs and retention</h2>
+        <h2>5. Transfer logs and retention</h2>
         <p>
           The API database stores one operational record per transfer containing
           the sender and receiver pseudonymous client identifiers, the
@@ -91,8 +141,7 @@ function PrivacyContent() {
           A transfer code remains active for up to one hour after its last
           activity. After that inactivity period, the in-memory room and its
           active connections are closed and the code can no longer be used.
-          Restarting the API marks previously unfinished database records as
-          expired. Completed and expired operational records remain in the
+          Completed and expired operational records remain in the
           configured database until the server operator deletes or purges them;
           this deployment does not promise automatic deletion of those records.
           Reverse-proxy and application logs may also contain connection
@@ -100,7 +149,7 @@ function PrivacyContent() {
         </p>
       </section>
       <section>
-        <h2>5. Browser storage</h2>
+        <h2>6. Browser storage</h2>
         <p>
           Your browser stores the pseudonymous client identifier, theme
           preference, and maximum-speed preference in local storage. These
@@ -110,7 +159,7 @@ function PrivacyContent() {
         </p>
       </section>
       <section>
-        <h2>6. Network and security</h2>
+        <h2>7. Network and security</h2>
         <p>
           Connections use the configured website API and WebSocket endpoints.
           The server relays traffic so the other participant does not receive
@@ -121,7 +170,7 @@ function PrivacyContent() {
         </p>
       </section>
       <section>
-        <h2>7. Service providers and disclosure</h2>
+        <h2>8. Service providers and disclosure</h2>
         <p>
           HoloTransfer does not sell personal information. Data may be
           accessible to the infrastructure provider operating the deployment, or
@@ -131,7 +180,7 @@ function PrivacyContent() {
         </p>
       </section>
       <section>
-        <h2>8. Your choices</h2>
+        <h2>9. Your choices</h2>
         <p>
           You can stop a transfer, clear local storage, and avoid using the
           service. Clearing local storage creates a new client identifier the
@@ -141,7 +190,7 @@ function PrivacyContent() {
         </p>
       </section>
       <section>
-        <h2>9. Changes</h2>
+        <h2>10. Changes</h2>
         <p>
           This policy may be updated when the service or its data handling
           changes. The date at the top of this page identifies the current
@@ -169,7 +218,42 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>2. Eligibility and authority</h2>
+        <h2>2. Open-source license and self-hosting</h2>
+        <p>
+          HoloTransfer is open-source software distributed under the GNU
+          General Public License version 3 (GNU GPL v3). The license gives
+          everyone the freedom to inspect, fork, modify, contribute to, and
+          redistribute the project, subject to the terms of the license.
+        </p>
+        <p>
+          You may host your own HoloTransfer version using the project’s{" "}
+          <a
+            className="legal-link"
+            href="https://github.com/Ezzud/holotransfer"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span className="legal-link-icon">
+              <GithubIcon />
+            </span>{" "}
+            GitHub repository
+          </a>
+          . Any fork or modified version must be operated in compliance with
+          the GNU GPL v3, applicable law, and the responsibilities of its own
+          operator.
+        </p>
+        <p>
+          The only official hosted website operated by the project owner is{" "}
+          <a href="https://holotransfer.app" target="_blank" rel="noreferrer">
+            holotransfer.app
+          </a>
+          . The project owner does not endorse or control any other hosted,
+          forked, or modified version and is not responsible for its service,
+          content, security, or availability.
+        </p>
+      </section>
+      <section>
+        <h2>3. Eligibility and authority</h2>
         <p>
           You may use the service only if you can legally agree to these terms
           and are permitted to share every file you submit. If you use
@@ -178,7 +262,7 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>3. Acceptable use</h2>
+        <h2>4. Acceptable use</h2>
         <p>
           You must not use HoloTransfer to transfer unlawful, fraudulent,
           infringing, abusive, malicious, or harmful material; violate another
@@ -188,7 +272,7 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>4. Your files and responsibility</h2>
+        <h2>5. Your files and responsibility</h2>
         <p>
           You retain responsibility for your files, their legality, their
           security, and the recipient you choose. HoloTransfer does not
@@ -199,7 +283,7 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>5. Transfer behavior</h2>
+        <h2>6. Transfer behavior</h2>
         <p>
           Transfers use temporary ten-character codes and are limited to one
           sender and one receiver. Codes may expire, connections may be refused,
@@ -210,7 +294,7 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>6. File handling and no storage</h2>
+        <h2>7. File handling and no storage</h2>
         <p>
           HoloTransfer does not write file contents to server disk, database
           storage, or any other persistent server storage. File data exists
@@ -222,7 +306,7 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>7. Availability and changes</h2>
+        <h2>8. Availability and changes</h2>
         <p>
           The service is provided on an “as available” basis. The operator may
           modify, suspend, limit, or discontinue the service, including
@@ -232,7 +316,7 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>8. Disclaimer and limitation</h2>
+        <h2>9. Disclaimer and limitation</h2>
         <p>
           To the maximum extent permitted by law, HoloTransfer is provided
           without warranties of uninterrupted availability, fitness for a
@@ -244,7 +328,7 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>9. Indemnity</h2>
+        <h2>10. Indemnity</h2>
         <p>
           To the extent permitted by law, you agree to defend and hold the
           operator harmless from claims, damages, and costs arising from your
@@ -253,7 +337,7 @@ function TermsContent() {
         </p>
       </section>
       <section>
-        <h2>10. Changes and contact</h2>
+        <h2>11. Changes and contact</h2>
         <p>
           These terms may change as the service evolves. Continued use after an
           update means you accept the revised terms. For questions or abuse

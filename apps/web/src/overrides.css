@@ -3,6 +3,75 @@
   cursor: wait;
 }
 
+.home-help-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 22px auto 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.home-help-button:hover {
+  color: var(--accent);
+}
+
+.page-transition {
+  width: 100%;
+  animation-duration: 520ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+}
+
+main {
+  overflow: hidden;
+}
+
+.page-transition.slide-receive {
+  animation-name: slide-from-right;
+}
+
+.page-transition.slide-send {
+  animation-name: slide-from-left;
+}
+
+.page-transition:not(.slide-send):not(.slide-receive) {
+  animation: none;
+}
+
+@keyframes slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(96px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-96px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+  }
+}
+
 .action-card.loading {
   justify-content: center;
 }
@@ -84,6 +153,32 @@
 
 .legal-sections p:last-child {
   margin-bottom: 0;
+}
+
+.legal-sections a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.legal-sections a:hover {
+  color: color-mix(in srgb, var(--accent) 78%, white);
+}
+
+.legal-link {
+  white-space: nowrap;
+}
+
+.legal-link-icon {
+  display: inline-block;
+  margin-right: 3px;
+  text-decoration: none;
+  vertical-align: -0.2em;
+}
+
+.legal-link-icon svg {
+  display: block;
+  width: 15px;
+  height: 15px;
 }
 
 .contact-options {

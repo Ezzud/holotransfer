@@ -1,6 +1,6 @@
 import { File } from "lucide-react";
 import type { FileInfo } from "../types";
-import { formatSize } from "./format";
+import { formatSize } from "../utils/format";
 
 /**
  * Renders file metadata.

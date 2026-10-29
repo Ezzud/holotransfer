@@ -1,24 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Check,
-  FileUp,
   LoaderCircle,
-  ArrowDownToLine,
-  Link2,
-  Send,
-  CheckCircle2,
   Heart,
 } from "lucide-react";
-import { Card } from "./components/Card";
-import { CodeInput } from "./components/CodeInput";
-import { DropZone } from "./components/DropZone";
-import { FileSummary } from "./components/FileSummary";
-import { formatSize, readableCode } from "./components/format";
 import { Header } from "./components/Header";
 import { HomeView } from "./components/HomeView";
 import { Modal } from "./components/Modal";
 import { LegalPage } from "./components/LegalPage";
 import { ContactPage } from "./components/ContactPage";
+import { ReviewView } from "./components/ReviewView";
+import { SendCodeView } from "./components/SendCodeView";
+import { SendFileView } from "./components/SendFileView";
+import { TransferCompleteView } from "./components/TransferCompleteView";
+import { TransferProgressView } from "./components/TransferProgressView";
 import { getSpeedSetting } from "./services/clientStorage";
 import {
   releaseScreenWakeLock,
@@ -56,6 +50,9 @@ import type {
  */
 export function App() {
   const [step, setStep] = useState<Step>("home");
+  const [navigationDirection, setNavigationDirection] = useState<
+    "send" | "receive" | "none"
+  >("none");
   const [code, setCode] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [file, setFile] = useState<FileInfo | null>(null);
@@ -199,7 +196,10 @@ export function App() {
    * Returns to the home page without reloading the browser.
    * @returns Nothing.
    */
-  function goHome(reason = ""): void {
+  function goHome(
+    reason = "",
+    direction: "send" | "receive" | "none" = "none",
+  ): void {
     if (
       !reason &&
       role === "sender" &&
@@ -225,6 +225,7 @@ export function App() {
     setTimeRemaining("");
     setWritingFile(false);
     setEncryptionReady(false);
+    setNavigationDirection(direction);
     encryptionKeyPair.current = null;
     encryptionPublicKey.current = null;
     encryptionKey.current = null;
@@ -304,6 +305,7 @@ export function App() {
   async function startSending(): Promise<void> {
     if (!clientReady) return;
     logger.info("Starting send flow");
+    setNavigationDirection("send");
     setPendingAction("send");
     await runRequest(async () => {
       const transferCode = await createTransfer(clientId.current);
@@ -321,6 +323,7 @@ export function App() {
   async function startReceiving(): Promise<void> {
     if (!clientReady) return;
     logger.info("Starting receive flow");
+    setNavigationDirection("receive");
     setPendingAction("receive");
     await runRequest(async () => {
       const transferCode = await joinTransfer(clientId.current, joinCode);
@@ -808,227 +811,110 @@ export function App() {
         onSettings={() => setModal("settings")}
       />
       <main>
-        {step === "home" && (
-          <HomeView
-            onSend={startSending}
-            onReceive={() => {
-              if (!clientReady) return;
-              setError("");
-              setStep("send-code");
-            }}
-            pendingAction={pendingAction}
-            clientReady={clientReady}
-            clientLoading={clientLoading}
-          />
-        )}
-        {step === "send-code" && (
-          <Card
-            onBack={() => goHome()}
-            title="Connect a device"
-            subtitle={
-              code
-                ? "Waiting for another device to connect using the code"
-                : "Enter the sender’s code to connect."
-            }
-          >
-            {code && <div className="code">{readableCode(code)}</div>}
-            {!code ? (
-              <>
-                <label>Transfer code</label>
-                <CodeInput value={joinCode} onChange={setJoinCode} />
-                <button
-                  className="button purple-button"
-                  disabled={joinCode.length !== 10 || pendingAction !== null}
-                  onClick={startReceiving}
-                >
-                  {pendingAction === "receive" ? (
-                    <LoaderCircle className="spin" size={17} />
-                  ) : (
-                    <Link2 size={17} />
-                  )}{" "}
-                  Connect
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="waiting">
-                  <span className="pulse" /> Waiting for the other device…
-                </div>
-                <button className="text-button" onClick={() => goHome()}>
-                  Cancel
-                </button>
-              </>
-            )}
-          </Card>
-        )}
-        {step === "send-file" && role === "receiver" && (
-          <Card
-            onBack={() => goHome()}
-            title="Waiting for the sender"
-            subtitle="The sender can now select a file to send to this device."
-          >
-            <div className="waiting">
-              <span className="pulse" /> Waiting for the sender to choose a
-              file…
-            </div>
-            <button className="text-button" onClick={() => goHome()}>
-              Cancel
-            </button>
-          </Card>
-        )}
-        {step === "send-file" && role !== "receiver" && (
-          <Card
-            onBack={() => goHome()}
-            title="Choose a file"
-            subtitle="Your file stays on this device until you start the upload."
-          >
-            <DropZone inputRef={inputRef} onSelect={selectFile} file={file} />
-            <button
-              className="button purple-button"
-              disabled={!file || !encryptionReady}
-              onClick={upload}
-            >
-              <FileUp size={17} /> Start uploading
-            </button>
-          </Card>
-        )}
-        {step === "review" && file && (
-          <Card
-            onBack={() => goHome()}
-            title="Ready to receive?"
-            subtitle="Someone wants to send this file to your device."
-          >
-            <FileSummary file={file} />
-            <div className="button-row">
-              <button
-                className="button subtle"
-                disabled={decisionPending}
-                onClick={() => decide(false)}
-              >
-                {decisionPending ? (
-                  <LoaderCircle className="spin" size={17} />
-                ) : null}{" "}
-                Deny
-              </button>
-              <button
-                className="button purple-button"
-                disabled={decisionPending}
-                onClick={() => decide(true)}
-              >
-                {decisionPending ? (
-                  <LoaderCircle className="spin" size={17} />
-                ) : (
-                  <Check size={17} />
-                )}{" "}
-                Confirm
-              </button>
-            </div>
-          </Card>
-        )}
-        {step === "transfer" && file && (
-          <Card
-            onBack={() => goHome()}
-            title="Transferring file"
-            subtitle="Keep this tab open while the transfer is in progress."
-          >
-            <FileSummary file={file} />
-            {senderWaiting && (
-              <div className="waiting-confirmation">
-                <LoaderCircle className="spin" size={18} /> Waiting for the
-                receiver to confirm…
-              </div>
-            )}
-            <div className="progress-percentage">
-              {timeRemaining === "00:00:00"
-                ? role === "sender"
-                  ? "Waiting for receiver"
-                  : "Writing file..."
-                : timeRemaining}
-            </div>
-            <div className="progress">
-              <div style={{ width: `${progress}%` }} />
-            </div>
-            {writingFile && role === "receiver" && (
-              <div className="write-progress indeterminate">
-                <div />
-              </div>
-            )}
-            <div className="progress-meta">
-              <span>
-                {timeRemaining === "00:00:00"
-                  ? role === "receiver" && writingFile
-                    ? "Writing file on your device"
-                    : role === "sender"
-                      ? "Receiver is writing file..."
-                      : "Downloading..."
-                  : `${progress}% complete`}
-              </span>
-              <span>{transferSpeed}</span>
-            </div>
-          </Card>
-        )}
-        {step === "done" && file && (
-          <Card onBack={() => goHome()} title="Transfer complete" subtitle="">
-            <div className="success-panel">
-              <div className="success">
-                <div>
-                  <Check size={28} />
-                </div>
-                <strong>{file.name}</strong>
-                <span>{formatSize(file.size)} transferred securely</span>
-              </div>
-              <div className="done-actions">
-                {role === "sender" && (
-                  <button
-                    className="button purple-button"
-                    onClick={() => {
-                      setFile(null);
-                      selectedFile.current = null;
-                      currentFile.current = null;
-                      setProgress(0);
-                      setTransferSpeed("0 B/s");
-                      setTimeRemaining("Calculating…");
-                      setError("");
-                      transferStartedAt.current = null;
-                      transferredBytes.current = 0;
-                      setSenderWaiting(false);
-                      setStep("send-file");
-                    }}
-                  >
-                    <Send size={17} /> Send another file
-                  </button>
-                )}
-                {role === "receiver" ? (
-                  <button
-                    className="button completion-button"
-                    onClick={() => {
-                      setFile(null);
-                      currentFile.current = null;
-                      receivedChunks.current = [];
-                      receivedBytes.current = 0;
-                      setProgress(0);
-                      setTransferSpeed("0 B/s");
-                      setTimeRemaining("Calculating…");
-                      setError("");
-                      transferStartedAt.current = null;
-                      transferredBytes.current = 0;
-                      setStep("send-file");
-                    }}
-                  >
-                    <CheckCircle2 size={17} /> Done
-                  </button>
-                ) : (
-                  <button
-                    className="button completion-button"
-                    onClick={() => goHome()}
-                  >
-                    <CheckCircle2 size={17} /> Done
-                  </button>
-                )}
-              </div>
-            </div>
-          </Card>
-        )}
+        <div
+          key={`${step}-${navigationDirection}`}
+          className={
+            navigationDirection === "none"
+              ? "page-transition"
+              : `page-transition slide-${navigationDirection}`
+          }
+        >
+          {step === "home" && (
+            <HomeView
+              onSend={startSending}
+              onHelp={() => setModal("help")}
+              onReceive={() => {
+                if (!clientReady) return;
+                setError("");
+                setNavigationDirection("receive");
+                setStep("send-code");
+              }}
+              pendingAction={pendingAction}
+              clientReady={clientReady}
+              clientLoading={clientLoading}
+            />
+          )}
+          {step === "send-code" && (
+            <SendCodeView
+              code={code}
+              joinCode={joinCode}
+              pendingAction={pendingAction}
+              onBack={() =>
+                goHome("", navigationDirection === "receive" ? "send" : "receive")
+              }
+              onJoinCodeChange={setJoinCode}
+              onConnect={startReceiving}
+            />
+          )}
+          {step === "send-file" && role && (
+            <SendFileView
+              role={role}
+              file={file}
+              inputRef={inputRef}
+              encryptionReady={encryptionReady}
+              onBack={() =>
+                goHome("", role === "receiver" ? "send" : "receive")
+              }
+              onSelect={selectFile}
+              onUpload={upload}
+            />
+          )}
+          {step === "review" && file && (
+            <ReviewView
+              file={file}
+              decisionPending={decisionPending}
+              onBack={() => goHome("", "send")}
+              onDecision={decide}
+            />
+          )}
+          {step === "transfer" && file && role && (
+            <TransferProgressView
+              file={file}
+              role={role}
+              progress={progress}
+              timeRemaining={timeRemaining}
+              transferSpeed={transferSpeed}
+              senderWaiting={senderWaiting}
+              writingFile={writingFile}
+              onBack={() =>
+                goHome("", role === "receiver" ? "send" : "receive")
+              }
+            />
+          )}
+          {step === "done" && file && role && (
+            <TransferCompleteView
+              file={file}
+              role={role}
+              onBack={() => goHome("", "none")}
+              onSendAnother={() => {
+                setFile(null);
+                selectedFile.current = null;
+                currentFile.current = null;
+                setProgress(0);
+                setTransferSpeed("0 B/s");
+                setTimeRemaining("Calculating…");
+                setError("");
+                transferStartedAt.current = null;
+                transferredBytes.current = 0;
+                setSenderWaiting(false);
+                setStep("send-file");
+              }}
+              onDone={() => {
+                setFile(null);
+                currentFile.current = null;
+                receivedChunks.current = [];
+                receivedBytes.current = 0;
+                setProgress(0);
+                setTransferSpeed("0 B/s");
+                setTimeRemaining("Calculating…");
+                setError("");
+                transferStartedAt.current = null;
+                transferredBytes.current = 0;
+                setStep("send-file");
+              }}
+            />
+          )}
+        </div>
         {error && <div className="error">{error}</div>}
       </main>
       <footer>

@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { File, Upload } from "lucide-react";
 import type { FileInfo } from "../types";
-import { formatSize } from "./format";
+import { formatSize } from "../utils/format";
 
 /**
  * Renders a file picker drop zone.

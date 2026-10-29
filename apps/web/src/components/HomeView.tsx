@@ -2,6 +2,7 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Check,
+  CircleHelp,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -19,9 +20,11 @@ export function HomeView({
   pendingAction,
   clientReady,
   clientLoading,
+  onHelp,
 }: {
   onSend: () => void;
   onReceive: () => void;
+  onHelp: () => void;
   pendingAction: PendingAction;
   clientReady: boolean;
   clientLoading: boolean;
@@ -61,9 +64,12 @@ export function HomeView({
           onClick={onReceive}
         />
       </section>
+      <button className="home-help-button" onClick={onHelp}>
+        <CircleHelp size={17} /> How does it work?
+      </button>
       <div className="trust">
         <span>
-          <ShieldCheck size={16} /> Securely relayed
+          <ShieldCheck size={16} /> End-to-end encryption
         </span>
         <span>
           <X size={15} /> No file storage

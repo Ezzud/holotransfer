@@ -21,7 +21,7 @@ export function Header({
             window.open("https://github.com/sponsors/Ezzud", "_blank")
           }
         >
-          <Heart size={16} /> Sponsor
+          <Heart size={16} /> Support my Work
         </button>
       </div>
       <nav>
