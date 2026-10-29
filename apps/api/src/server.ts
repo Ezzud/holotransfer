@@ -3,7 +3,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import { TransferManager } from './managers/transferManager.js';
 import { TransferLogManager } from './managers/transferLogManager.js';
 import { createTransferController } from './controllers/createTransferController.js';
@@ -31,6 +31,7 @@ const clientController = createClientController(clientManager);
 const app = express();
 const httpServer = createServer(app);
 const websocketServer = new WebSocketServer({ server: httpServer, path: config.websocketPath });
+const socketHealth = new WeakMap<WebSocket, boolean>();
 
 /**
  * Configures Express middleware and transfer routes.
@@ -74,6 +75,23 @@ function scheduleRoomCleanup(): void {
     logger.warn('Transfer code expired', { code: room.code });
     return logController(room, 'expired');
   }), 60_000).unref();
+}
+
+/**
+ * Keeps intermediary proxies and long-running WebSocket connections active.
+ * @returns Nothing.
+ */
+function scheduleWebSocketHeartbeat(): void {
+  setInterval(() => {
+    for (const socket of websocketServer.clients) {
+      if (socketHealth.get(socket) === false) {
+        socket.terminate();
+        continue;
+      }
+      socketHealth.set(socket, false);
+      socket.ping();
+    }
+  }, 20_000).unref();
 }
 
 /**
@@ -134,6 +152,8 @@ async function handleConnection(socket: import('ws').WebSocket, request: import(
     return;
   }
   logger.info('WebSocket peer connected', { code, clientId, role });
+  socketHealth.set(socket, true);
+  socket.on('pong', () => socketHealth.set(socket, true));
   socket.send(JSON.stringify({ type: 'connected', role }));
   if (room.peers.size === 2) {
     logger.success('Transfer devices connected', { code });
@@ -160,6 +180,10 @@ async function handleConnection(socket: import('ws').WebSocket, request: import(
           manager.expireRoom(room, 'The sender disconnected. This transfer has ended.');
           return;
         }
+        if (message.type === 'keepalive') {
+          manager.touchRoom(room);
+          return;
+        }
         const state = manager.applyMessage(room, message);
         if (state) {
           void logController(room, state);
@@ -174,7 +198,7 @@ async function handleConnection(socket: import('ws').WebSocket, request: import(
       }
     }
   });
-  socket.on('close', () => {
+  socket.on('close', (closeCode, closeReason) => {
     if (role === 'sender' && manager.getRoom(code) === room && room.peers.size > 1) {
       logger.warn('Sender connection closed; expiring transfer code', { code, clientId });
       void logController(room, 'expired');
@@ -188,11 +212,12 @@ async function handleConnection(socket: import('ws').WebSocket, request: import(
       return;
     }
     manager.removePeer(room, clientId);
-    logger.info('WebSocket peer disconnected', { code, clientId });
+    logger.info('WebSocket peer disconnected', { code, clientId, closeCode, closeReason: closeReason.toString() });
   });
 }
 
 websocketServer.on('connection', handleConnection);
+scheduleWebSocketHeartbeat();
 void startServer();
 
 /**

@@ -94,6 +94,13 @@ export function App() {
     return () => window.clearInterval(timer);
   }, [step]);
   useEffect(() => {
+    if (step !== 'transfer') return;
+    const keepalive = window.setInterval(() => {
+      if (socket.current?.readyState === WebSocket.OPEN) socket.current.send(JSON.stringify({ type: 'keepalive' }));
+    }, 15_000);
+    return () => window.clearInterval(keepalive);
+  }, [step]);
+  useEffect(() => {
     if (step !== 'transfer') {
       releaseScreenWakeLock();
       return;

@@ -50,6 +50,13 @@ export class TransferManager {
   public addPeer(room: TransferRoom, peer: TransferPeer): void { room.peers.set(peer.id, peer); room.lastActivity = Date.now(); }
 
   /**
+   * Refreshes room activity without changing transfer state.
+   * @param room Transfer room.
+   * @returns Nothing.
+   */
+  public touchRoom(room: TransferRoom): void { room.lastActivity = Date.now(); }
+
+  /**
    * Applies a protocol message and records its state.
    * @param room Transfer room.
    * @param message Parsed message.
@@ -90,6 +97,7 @@ export class TransferManager {
    * @returns Nothing.
    */
   public relay(room: TransferRoom, senderId: string, payload: string | Buffer): void {
+    room.lastActivity = Date.now();
     for (const peer of room.peers.values()) if (peer.id !== senderId && peer.socket.readyState === WebSocket.OPEN) peer.socket.send(payload);
   }
 
