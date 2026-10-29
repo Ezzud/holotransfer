@@ -48,6 +48,7 @@ export function App() {
   const currentFile = useRef<FileInfo | null>(null);
   const receivedChunks = useRef<BlobPart[]>([]);
   const receivedBytes = useRef(0);
+  const writtenBytes = useRef(0);
   const transferStartedAt = useRef<number | null>(null);
   const transferredBytes = useRef(0);
   const downloadWriter = useRef<FileSystemWritableFileStream | null>(null);
@@ -120,6 +121,7 @@ export function App() {
     currentFile.current = null;
     receivedChunks.current = [];
     receivedBytes.current = 0;
+    writtenBytes.current = 0;
     setCode('');
     setJoinCode('');
     setFile(null);
@@ -286,7 +288,8 @@ export function App() {
       setWritingFile(true);
       downloadWriteQueue.current = downloadWriteQueue.current.then(async () => {
         await writer.write(chunk);
-        setWritingProgress((written) => Math.min(100, written + (chunk.byteLength / metadata.size) * 100));
+        writtenBytes.current += chunk.byteLength;
+        setWritingProgress(Math.min(99, (writtenBytes.current / metadata.size) * 100));
       });
     } else {
       receivedChunks.current.push(chunk);
@@ -301,6 +304,7 @@ export function App() {
         await downloadWriteQueue.current;
         await downloadWriter.current.close();
         downloadWriter.current = null;
+        writtenBytes.current = metadata.size;
         setWritingProgress(100);
         setWritingFile(false);
       } else {
@@ -385,6 +389,7 @@ export function App() {
         const handle = await saveFilePicker({ suggestedName: currentFile.current.name });
         downloadWriter.current = await handle.createWritable();
         downloadWriteQueue.current = Promise.resolve();
+        writtenBytes.current = 0;
         setWritingProgress(0);
       } catch (reason: unknown) {
         logger.error('Unable to open file destination', reason);
@@ -412,7 +417,7 @@ export function App() {
     {step === 'send-file' && role === 'receiver' && <Card onBack={() => goHome()} title="Waiting for the sender" subtitle="The sender can now select a file to send to this device."><div className="waiting"><span className="pulse" /> Waiting for the sender to choose a file…</div><button className="text-button" onClick={() => goHome()}>Cancel</button></Card>}
     {step === 'send-file' && role !== 'receiver' && <Card onBack={() => goHome()} title="Choose a file" subtitle="Your file stays on this device until you start the upload."><DropZone inputRef={inputRef} onSelect={selectFile} file={file} /><button className="button pink-button" disabled={!file} onClick={upload}><FileUp size={17} /> Start uploading</button></Card>}
     {step === 'review' && file && <Card onBack={() => goHome()} title="Ready to receive?" subtitle="Someone wants to send this file to your device."><FileSummary file={file} /><div className="button-row"><button className="button subtle" disabled={decisionPending} onClick={() => decide(false)}>{decisionPending ? <LoaderCircle className="spin" size={17} /> : null} Deny</button><button className="button pink-button" disabled={decisionPending} onClick={() => decide(true)}>{decisionPending ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />} Confirm</button></div></Card>}
-    {step === 'transfer' && file && <Card onBack={() => goHome()} title="Transferring file" subtitle="Keep this tab open while the transfer is in progress."><FileSummary file={file} />{senderWaiting && <div className="waiting-confirmation"><LoaderCircle className="spin" size={18} /> Waiting for the receiver to confirm…</div>}{writingFile && role === 'receiver' && <div className="write-status"><div className="waiting-confirmation"><LoaderCircle className="spin" size={18} /> Writing file: {Math.round(writingProgress)}%</div><div className="write-progress"><div style={{ width: `${writingProgress}%` }} /></div></div>}<div className="progress-percentage">{timeRemaining === '00:00:00' ? (role === 'sender' ? 'Waiting for receiver' : 'Downloading...') : timeRemaining}</div><div className="progress"><div style={{ width: `${progress}%` }} /></div><div className="progress-meta"><span>{progress}% complete</span><span>{transferSpeed}</span></div></Card>}
+    {step === 'transfer' && file && <Card onBack={() => goHome()} title="Transferring file" subtitle="Keep this tab open while the transfer is in progress."><FileSummary file={file} />{senderWaiting && <div className="waiting-confirmation"><LoaderCircle className="spin" size={18} /> Waiting for the receiver to confirm…</div>}<div className="progress-percentage">{timeRemaining === '00:00:00' ? (role === 'sender' ? 'Waiting for receiver' : 'Downloading...') : timeRemaining}</div><div className="progress"><div style={{ width: `${progress}%` }} /></div>{writingFile && role === 'receiver' && <div className="write-progress"><div style={{ width: `${writingProgress}%` }} /></div>}<div className="progress-meta"><span>{timeRemaining === '00:00:00' ? (role === 'receiver' && writingFile ? 'Writing file on your device' : role === 'sender' ? 'Receiver is writing file' : 'Downloading...') : `${progress}% complete`}</span><span>{transferSpeed}</span></div></Card>}
     {step === 'done' && file && <Card onBack={() => goHome()} title="Transfer complete" subtitle=""><div className="success-panel"><div className="success"><div><Check size={28} /></div><strong>{file.name}</strong><span>{formatSize(file.size)} transferred securely</span></div><div className="done-actions">{role === 'sender' && <button className="button pink-button" onClick={() => { setFile(null); selectedFile.current = null; currentFile.current = null; setProgress(0); setTransferSpeed('0 B/s'); setTimeRemaining('Calculating…'); setError(''); transferStartedAt.current = null; transferredBytes.current = 0; setSenderWaiting(false); setStep('send-file'); }}><Send size={17} /> Send another file</button>}{role === 'receiver' ? <button className="button completion-button" onClick={() => { setFile(null); currentFile.current = null; receivedChunks.current = []; receivedBytes.current = 0; setProgress(0); setTransferSpeed('0 B/s'); setTimeRemaining('Calculating…'); setError(''); transferStartedAt.current = null; transferredBytes.current = 0; setStep('send-file'); }}><CheckCircle2 size={17} /> Done</button> : <button className="button completion-button" onClick={() => goHome()}><CheckCircle2 size={17} /> Done</button>}</div></div></Card>}
     {error && <div className="error">{error}</div>}</main><footer><span>© 2026 TransferMaster</span><div><button onClick={() => openLegalPage('privacy')}>Privacy</button><button onClick={() => openLegalPage('terms')}>Terms</button></div></footer>
     {modal && <Modal type={modal} dark={dark} setDark={setDark} maxSpeed={maxSpeed} setMaxSpeed={setMaxSpeed} speedUnit={speedUnit} setSpeedUnit={setSpeedUnit} onClose={() => setModal(null)} />}
