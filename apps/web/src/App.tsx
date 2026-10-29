@@ -52,7 +52,21 @@ import type {
 
 const transferChunkSize = 2 * 1024 * 1024;
 const transferWindowSize = 32 * 1024 * 1024;
-const nativeWriteBatchSize = 8 * 1024 * 1024;
+const browserWriteBatchSize = 32 * 1024 * 1024;
+const nativeWriteBatchSize = 32 * 1024 * 1024;
+
+function combineChunks(
+  chunks: ArrayBuffer[],
+  totalBytes: number,
+): Uint8Array<ArrayBuffer> {
+  const combined = new Uint8Array(new ArrayBuffer(totalBytes));
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(new Uint8Array(chunk), offset);
+    offset += chunk.byteLength;
+  }
+  return combined;
+}
 
 /**
  * Keeps the selected output filename's extension aligned with the source file.
@@ -137,6 +151,7 @@ export function App() {
   const pendingWriteChunks = useRef<ArrayBuffer[]>([]);
   const pendingWriteBytes = useRef(0);
   const writtenFileBytes = useRef(0);
+  const writeProgressLastUpdatedAt = useRef(0);
   const downloadWriteQueue = useRef(Promise.resolve());
   const chunkAckResolver = useRef<((bytes: number) => void) | null>(null);
   const chunkAckTarget = useRef<number | null>(null);
@@ -614,6 +629,7 @@ export function App() {
         Promise.resolve(),
       );
       downloadWriteQueue.current = Promise.resolve();
+      writeProgressLastUpdatedAt.current = 0;
       setWriteProgress(0);
       setStep("review");
     }
@@ -789,33 +805,38 @@ export function App() {
       pendingWriteChunks.current.push(chunk);
       pendingWriteBytes.current += chunk.byteLength;
       if (
-        pendingWriteBytes.current >= nativeWriteBatchSize ||
+        pendingWriteBytes.current >=
+          (nativeFileHandle.current
+            ? nativeWriteBatchSize
+            : browserWriteBatchSize) ||
         receivedBytes.current + chunk.byteLength >= metadata.size
       ) {
         const batch = pendingWriteChunks.current;
+        const batchBytes = pendingWriteBytes.current;
         pendingWriteChunks.current = [];
         pendingWriteBytes.current = 0;
         const browserWriter = downloadWriter.current;
         const nativeWriter = nativeFileHandle.current;
+        const batchData = combineChunks(batch, batchBytes);
         downloadWriteQueue.current = downloadWriteQueue.current.then(async () => {
           if (browserWriter) {
-            await browserWriter.write(new Blob(batch));
+            await browserWriter.write(batchData);
           } else if (nativeWriter) {
-            const data = await new Blob(batch).arrayBuffer();
-            await nativeWriter.write(new Uint8Array(data));
+            await nativeWriter.write(batchData);
           }
-          writtenFileBytes.current += batch.reduce(
-            (total, item) => total + item.byteLength,
-            0,
+          writtenFileBytes.current += batchBytes;
+          const nextProgress = Math.min(
+            100,
+            Math.round((writtenFileBytes.current / metadata.size) * 100),
           );
-          setWriteProgress(
-            Math.min(
-              100,
-              Math.round(
-                (writtenFileBytes.current / metadata.size) * 100,
-              ),
-            ),
-          );
+          const now = performance.now();
+          if (
+            nextProgress === 100 ||
+            now - writeProgressLastUpdatedAt.current >= 250
+          ) {
+            writeProgressLastUpdatedAt.current = now;
+            setWriteProgress(nextProgress);
+          }
         });
       }
     } else {
