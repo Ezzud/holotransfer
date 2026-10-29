@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  rmSync,
   statSync,
 } from "node:fs";
 import { basename, resolve } from "node:path";
@@ -44,6 +45,7 @@ function isArtifact(filename) {
   return allowedExtensions.some((extension) => filename.endsWith(extension));
 }
 
+rmSync(outputDirectory, { recursive: true, force: true });
 mkdirSync(outputDirectory, { recursive: true });
 const files = findFiles(inputDirectory);
 const artifacts = files.filter((file) => isArtifact(basename(file)));
