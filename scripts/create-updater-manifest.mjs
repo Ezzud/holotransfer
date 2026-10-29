@@ -1,4 +1,5 @@
 import {
+  existsSync,
   readdirSync,
   readFileSync,
   writeFileSync,
@@ -15,9 +16,9 @@ const outputPath = resolve(process.env.RELEASE_MANIFEST ?? "latest.json");
 if (!version) throw new Error("RELEASE_VERSION is required.");
 
 const platformFiles = {
-  "windows-x86_64": [".msi", ".exe"],
-  "linux-x86_64": [".AppImage"],
-  "darwin-x86_64": [".dmg"],
+  "windows-x86_64": [".exe"],
+  "linux-x86_64": [".AppImage", ".rpm"],
+  "darwin-x86_64": [".app.tar.gz", ".dmg"],
 };
 
 function findFiles(directory) {
@@ -31,17 +32,24 @@ const platforms = {};
 for (const [platform, extensions] of Object.entries(platformFiles)) {
   const directory = resolve(assetsRoot, platform);
   const files = findFiles(directory);
-  const bundle = files.find((path) =>
-    extensions.some((extension) => path.endsWith(extension)),
-  );
-  if (!bundle) throw new Error(`No updater bundle found for ${platform}.`);
+  const bundle = extensions
+    .map((extension) => files.find((path) => path.endsWith(extension)))
+    .find(Boolean);
+  if (!bundle) {
+    console.warn(`No updater bundle found for ${platform}; skipping.`);
+    continue;
+  }
 
   const signaturePath = `${bundle}.sig`;
-  const signature = readFileSync(signaturePath, "utf8").trim();
   const filename = basename(bundle);
-  platforms[platform] = {
-    signature,
+  const platformEntry = {
     url: `https://github.com/${repository}/releases/latest/download/${filename}`,
+  };
+  if (existsSync(signaturePath)) {
+    platformEntry.signature = readFileSync(signaturePath, "utf8").trim();
+  }
+  platforms[platform] = {
+    ...platformEntry,
   };
 }
 
