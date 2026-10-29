@@ -31,6 +31,10 @@ function findFiles(directory) {
 const platforms = {};
 for (const [platform, extensions] of Object.entries(platformFiles)) {
   const directory = resolve(assetsRoot, platform);
+  if (!existsSync(directory)) {
+    console.warn(`No asset directory found for ${platform}; skipping.`);
+    continue;
+  }
   const files = findFiles(directory);
   const bundle = extensions
     .map((extension) => files.find((path) => path.endsWith(extension)))

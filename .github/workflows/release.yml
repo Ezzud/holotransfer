@@ -126,6 +126,11 @@ jobs:
         with:
           path: release-assets
           merge-multiple: false
+      - name: Stage release assets
+        run: node scripts/stage-release-assets.mjs
+        env:
+          RELEASE_ASSETS_DIR: release-assets
+          RELEASE_OUTPUT_DIR: release-upload
       - run: node scripts/create-updater-manifest.mjs
         env:
           RELEASE_ASSETS_DIR: release-assets
@@ -136,7 +141,7 @@ jobs:
           tag_name: v${{ needs.version_check.outputs.version }}
           generate_release_notes: true
           files: |
-            release-assets/**/*
+            release-upload/**/*
             latest.json
 
   android:
