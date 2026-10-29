@@ -58,7 +58,7 @@ export class EndpointManager {
     );
     this.application.post(
       `${config.apiPrefix}/transfers`,
-      this.CreateRateLimiter(3),
+      this.CreateRateLimiter(3, 30_000, "30 seconds"),
       createTransferController(this.transfers, this.clients),
     );
     this.application.post(
@@ -72,9 +72,14 @@ export class EndpointManager {
    * Creates a JSON rate limiter.
    * @param limit Maximum requests in the window.
    * @param windowMs Rate-limit window in milliseconds.
+   * @param retryWindow Human-readable retry window.
    * @returns Configured rate-limit middleware.
    */
-  private CreateRateLimiter(limit: number, windowMs = 60_000) {
+  private CreateRateLimiter(
+    limit: number,
+    windowMs = 60_000,
+    retryWindow = "a minute",
+  ) {
     return rateLimit({
       windowMs,
       limit,
@@ -82,7 +87,7 @@ export class EndpointManager {
       handler: (_request, response) =>
         response
           .status(429)
-          .json({ error: "Too many requests. Try again in a minute." }),
+          .json({ error: `Too many requests. Try again in ${retryWindow}.` }),
     });
   }
 }

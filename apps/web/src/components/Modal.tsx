@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   CircleCheck,
   FileKey,
@@ -35,6 +36,14 @@ export function Modal({
   setSpeedUnit: (value: SpeedUnit) => void;
   onClose: () => void;
 }) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
