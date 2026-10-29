@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { FileHandle } from "@tauri-apps/plugin-fs";
 import {
   LoaderCircle,
   Heart,
@@ -92,6 +93,7 @@ export function App() {
   const transferStartedAt = useRef<number | null>(null);
   const transferredBytes = useRef(0);
   const downloadWriter = useRef<FileSystemWritableFileStream | null>(null);
+  const nativeFileHandle = useRef<FileHandle | null>(null);
   const nativeSavePath = useRef<string | null>(null);
   const downloadWriteQueue = useRef(Promise.resolve());
   const receiveChunkQueue = useRef(Promise.resolve());
@@ -125,6 +127,27 @@ export function App() {
     };
     document.addEventListener("click", handleExternalLink, true);
     return () => document.removeEventListener("click", handleExternalLink, true);
+  }, []);
+  useEffect(() => {
+    if (!isTauriRuntime() || !/android/i.test(navigator.userAgent)) return;
+    if (localStorage.getItem("background_permission_prompt_declined") === "true")
+      return;
+    void (async () => {
+      try {
+        const { ask } = await import("@tauri-apps/plugin-dialog");
+        const allowSettings = await ask(
+          "Allow HoloTransfer to keep transfers active while this app is in the background? Android may otherwise pause or stop transfers.",
+          { title: "Background transfers", kind: "info", okLabel: "Open settings", cancelLabel: "Not now" },
+        );
+        if (!allowSettings) {
+          localStorage.setItem("background_permission_prompt_declined", "true");
+          return;
+        }
+        await openExternalLink("package:app.holotransfer.desktop");
+      } catch (reason: unknown) {
+        logger.warn("Unable to open Android background settings", reason);
+      }
+    })();
   }, []);
   useEffect(() => {
     const handlePopState = () => setLegalPage(getLegalPage());
@@ -241,9 +264,12 @@ export function App() {
 
     socket.current?.close();
     socket.current = null;
+    if (nativeFileHandle.current) void nativeFileHandle.current.close();
+    nativeFileHandle.current = null;
     selectedFile.current = null;
     currentFile.current = null;
     receivedChunks.current = [];
+    nativeFileHandle.current = null;
     nativeSavePath.current = null;
     receivedBytes.current = 0;
     setCode("");
@@ -608,6 +634,11 @@ export function App() {
       downloadWriteQueue.current = downloadWriteQueue.current.then(async () => {
         await writer.write(chunk);
       });
+    } else if (nativeFileHandle.current) {
+      const writer = nativeFileHandle.current;
+      downloadWriteQueue.current = downloadWriteQueue.current.then(async () => {
+        await writer.write(new Uint8Array(chunk));
+      });
     } else {
       receivedChunks.current.push(chunk);
     }
@@ -620,18 +651,21 @@ export function App() {
     if (receivedBytes.current < metadata.size) return;
     try {
       if (downloadWriter.current) {
+        setProgress(100);
+        setTimeRemaining("00:00:00");
         setWritingFile(true);
         await downloadWriteQueue.current;
         await downloadWriter.current.close();
         downloadWriter.current = null;
         setWritingFile(false);
-      } else if (nativeSavePath.current) {
+      } else if (nativeFileHandle.current) {
+        setProgress(100);
+        setTimeRemaining("00:00:00");
         setWritingFile(true);
-        const { writeFile } = await import("@tauri-apps/plugin-fs");
-        const data = await new Blob(receivedChunks.current).arrayBuffer();
-        await writeFile(nativeSavePath.current, new Uint8Array(data));
+        await downloadWriteQueue.current;
+        await nativeFileHandle.current.close();
+        nativeFileHandle.current = null;
         nativeSavePath.current = null;
-        receivedChunks.current = [];
         setWritingFile(false);
       } else {
         const url = URL.createObjectURL(
@@ -765,6 +799,7 @@ export function App() {
     ) {
       try {
         const { save } = await import("@tauri-apps/plugin-dialog");
+        const { open } = await import("@tauri-apps/plugin-fs");
         const path = await save({
           defaultPath: currentFile.current.name,
         });
@@ -773,6 +808,11 @@ export function App() {
           return;
         }
         nativeSavePath.current = path;
+        nativeFileHandle.current = await open(path, {
+          write: true,
+          create: true,
+          truncate: true,
+        });
       } catch (reason: unknown) {
         logger.error("Unable to open native file destination", reason);
         setDecisionPending(false);
