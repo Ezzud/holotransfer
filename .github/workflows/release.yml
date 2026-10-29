@@ -94,7 +94,13 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri -> apps/desktop/src-tauri/target
       - run: pnpm install --frozen-lockfile
-      - run: node -e "require('node:fs').copyFileSync('apps/web/.env.tauri.example', 'apps/web/.env.tauri')"
+      - name: Create Tauri environment
+        run: node scripts/create-tauri-env.mjs
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_API_PREFIX: ${{ vars.VITE_API_PREFIX }}
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+          VITE_WS_PATH: ${{ vars.VITE_WS_PATH }}
       - run: pnpm version:sync
       - run: pnpm --filter @holotransfer/desktop tauri build --ci --config src-tauri/tauri.conf.json --config src-tauri/${{ matrix.config }}
         env:
@@ -131,6 +137,7 @@ jobs:
         env:
           RELEASE_ASSETS_DIR: release-assets
           RELEASE_OUTPUT_DIR: release-upload
+          RELEASE_VERSION: ${{ needs.version_check.outputs.version }}
       - name: List release assets
         run: find release-upload -maxdepth 1 -type f -printf '%f\n' | sort
       - run: node scripts/create-updater-manifest.mjs
@@ -183,7 +190,13 @@ jobs:
             "ndk;27.0.12077973"
       - run: rustup target add aarch64-linux-android
       - run: pnpm install --frozen-lockfile
-      - run: node -e "require('node:fs').copyFileSync('apps/web/.env.tauri.example', 'apps/web/.env.tauri')"
+      - name: Create Tauri environment
+        run: node scripts/create-tauri-env.mjs
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_API_PREFIX: ${{ vars.VITE_API_PREFIX }}
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+          VITE_WS_PATH: ${{ vars.VITE_WS_PATH }}
       - run: pnpm version:sync
       - run: pnpm --filter @holotransfer/desktop tauri android init
       - name: Restore Android signing keystore
@@ -192,13 +205,14 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/holotransfer-release.jks"
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      - run: pnpm --filter @holotransfer/desktop tauri android build --ci --target aarch64 --apk
+      - name: Configure Android signing
+        run: node scripts/configure-android-signing.mjs
         env:
-          TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/holotransfer-release.jks
-          TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          TAURI_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/holotransfer-release.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - run: pnpm --filter @holotransfer/desktop tauri android build --ci --target aarch64 --apk
       - uses: actions/upload-artifact@v4
         with:
           name: android
@@ -220,7 +234,13 @@ jobs:
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
       - run: pnpm install --frozen-lockfile
-      - run: node -e "require('node:fs').copyFileSync('apps/web/.env.tauri.example', 'apps/web/.env.tauri')"
+      - name: Create Tauri environment
+        run: node scripts/create-tauri-env.mjs
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_API_PREFIX: ${{ vars.VITE_API_PREFIX }}
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+          VITE_WS_PATH: ${{ vars.VITE_WS_PATH }}
       - run: pnpm version:sync
       - run: pnpm --filter @holotransfer/desktop tauri ios init
       - run: pnpm --filter @holotransfer/desktop tauri ios build --debug

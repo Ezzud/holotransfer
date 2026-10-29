@@ -1,0 +1,68 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const androidDirectory = resolve("apps", "desktop", "src-tauri", "gen", "android");
+const gradlePath = resolve(androidDirectory, "app", "build.gradle.kts");
+const propertiesPath = resolve(androidDirectory, "keystore.properties");
+const requiredVariables = [
+  "ANDROID_KEYSTORE_PATH",
+  "ANDROID_KEY_ALIAS",
+  "ANDROID_KEYSTORE_PASSWORD",
+  "ANDROID_KEY_PASSWORD",
+];
+
+for (const name of requiredVariables) {
+  if (!process.env[name]) {
+    throw new Error(`${name} is required for Android signing.`);
+  }
+}
+
+writeFileSync(
+  propertiesPath,
+  [
+    `keyAlias=${process.env.ANDROID_KEY_ALIAS}`,
+    `storePassword=${process.env.ANDROID_KEYSTORE_PASSWORD}`,
+    `keyPassword=${process.env.ANDROID_KEY_PASSWORD}`,
+    `storeFile=${process.env.ANDROID_KEYSTORE_PATH}`,
+    "",
+  ].join("\n"),
+  "utf8",
+);
+
+let gradle = readFileSync(gradlePath, "utf8");
+if (!gradle.includes("import java.io.FileInputStream")) {
+  gradle = `import java.io.FileInputStream\nimport java.util.Properties\n\n${gradle}`;
+}
+
+const signingConfig = `    create("release") {
+        val keystorePropertiesFile = rootProject.file("keystore.properties")
+        val keystoreProperties = Properties()
+        if (keystorePropertiesFile.exists()) {
+            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+        }
+        keyAlias = keystoreProperties["keyAlias"] as String
+        keyPassword = keystoreProperties["keyPassword"] as String
+        storeFile = file(keystoreProperties["storeFile"] as String)
+        storePassword = keystoreProperties["storePassword"] as String
+    }
+
+`;
+
+if (!gradle.includes('create("release")')) {
+  const buildTypesIndex = gradle.indexOf("buildTypes {");
+  if (buildTypesIndex < 0) {
+    throw new Error("Could not find Android buildTypes block.");
+  }
+  gradle = `${gradle.slice(0, buildTypesIndex)}signingConfigs {\n${signingConfig}}${gradle.slice(buildTypesIndex)}`;
+}
+
+const releaseBlock = /getByName\("release"\)\s*\{/;
+if (!releaseBlock.test(gradle)) {
+  throw new Error("Could not find Android release build type.");
+}
+gradle = gradle.replace(
+  releaseBlock,
+  'getByName("release") {\n        signingConfig = signingConfigs.getByName("release")',
+);
+writeFileSync(gradlePath, gradle, "utf8");
+console.log("Configured Android Gradle release signing.");

@@ -14,6 +14,7 @@ const inputDirectory = resolve(
 const outputDirectory = resolve(
   process.env.RELEASE_OUTPUT_DIR ?? "release-upload",
 );
+const version = process.env.RELEASE_VERSION?.replace(/^v/, "");
 const allowedExtensions = [
   ".rpm",
   ".AppImage",
@@ -45,6 +46,18 @@ function isArtifact(filename) {
   return allowedExtensions.some((extension) => filename.endsWith(extension));
 }
 
+/**
+ * Returns the release filename for a staged artifact.
+ * @param {string} filename Source artifact filename.
+ * @returns {string} Release artifact filename.
+ */
+function getReleaseFilename(filename) {
+  if (filename.endsWith(".apk") && version) {
+    return `HoloTransfer-v${version}.apk`;
+  }
+  return filename;
+}
+
 rmSync(outputDirectory, { recursive: true, force: true });
 mkdirSync(outputDirectory, { recursive: true });
 const files = findFiles(inputDirectory);
@@ -67,10 +80,23 @@ for (const artifact of artifacts) {
   }
 }
 
-for (const file of [...artifacts, ...signatures]) {
-  const destination = resolve(outputDirectory, basename(file));
+for (const file of artifacts) {
+  const destination = resolve(
+    outputDirectory,
+    getReleaseFilename(basename(file)),
+  );
   copyFileSync(file, destination);
-  console.log(`[release-assets] Staged ${basename(file)}`);
+  console.log(`[release-assets] Staged ${basename(file)} as ${basename(destination)}`);
+}
+
+for (const file of signatures) {
+  const sourceArtifact = basename(file).slice(0, -".sig".length);
+  const destination = resolve(
+    outputDirectory,
+    `${getReleaseFilename(sourceArtifact)}.sig`,
+  );
+  copyFileSync(file, destination);
+  console.log(`[release-assets] Staged ${basename(file)} as ${basename(destination)}`);
 }
 
 console.log(
