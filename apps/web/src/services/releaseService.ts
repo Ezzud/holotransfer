@@ -1,7 +1,7 @@
 import { getPlatformLabel } from "./platformService";
 import { logger } from "./logger";
 
-const latestReleaseUrl = import.meta.env.VITE_LATEST_RELEASE_URL;
+const latestReleaseUrl = import.meta.env.LATEST_RELEASE_URL;
 
 export type AvailableRelease = {
   version: string;

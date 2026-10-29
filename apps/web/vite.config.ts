@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
-  const environment = loadEnv(mode, process.cwd(), "VITE_");
+  const environment = loadEnv(mode, process.cwd(), "");
   const packageJson = JSON.parse(
     readFileSync(resolve(process.cwd(), "../../package.json"), "utf8"),
   ) as { version: string };
@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => {
     define: {
       "import.meta.env.VITE_APP_VERSION": JSON.stringify(
         environment.VITE_APP_VERSION ?? packageJson.version,
+      ),
+      "import.meta.env.LATEST_RELEASE_URL": JSON.stringify(
+        environment.LATEST_RELEASE_URL ?? "",
       ),
     },
     server: { port: Number(environment.VITE_PORT ?? 51739) },

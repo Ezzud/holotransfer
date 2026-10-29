@@ -23,7 +23,7 @@ if (!latestReleaseUrl) {
 
 const environment = [
   ...requiredVariables.map((name) => `${name}=${process.env[name]}`),
-  `VITE_LATEST_RELEASE_URL=${latestReleaseUrl}`,
+  `LATEST_RELEASE_URL=${latestReleaseUrl}`,
   `VITE_APP_VERSION=${packageJson.version}`,
   "VITE_PORT=51739",
   "VITE_TAURI=true",
