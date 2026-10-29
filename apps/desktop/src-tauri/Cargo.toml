@@ -1,6 +1,6 @@
 [package]
 name = "holotransfer"
-version = "0.1.1"
+version = "0.1.2"
 description = "Private encrypted file transfers between your devices"
 authors = ["Ezzud"]
 edition = "2021"
@@ -15,6 +15,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-process = "2"
+tauri-plugin-shell = "2"
 tauri-plugin-updater = "2"
 serde_json = "1"
 

@@ -26,7 +26,9 @@ import {
   sendMetadata,
 } from "./services/transferService";
 import { logger } from "./services/logger";
-import { checkForAppUpdate } from "./services/updaterService";
+import { openExternalLink } from "./services/externalLinkService";
+import { checkForLatestRelease } from "./services/releaseService";
+import type { AvailableRelease } from "./services/releaseService";
 import {
   decryptChunk,
   deriveTransferKey,
@@ -67,6 +69,8 @@ export function App() {
   const [decisionPending, setDecisionPending] = useState(false);
   const [error, setError] = useState("");
   const [modal, setModal] = useState<ModalType | null>(null);
+  const [availableRelease, setAvailableRelease] =
+    useState<AvailableRelease | null>(null);
   const [legalPage, setLegalPage] = useState<"privacy" | "terms" | "contact" | null>(() =>
     getLegalPage(),
   );
@@ -98,7 +102,25 @@ export function App() {
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
   useEffect(() => {
-    void checkForAppUpdate();
+    void checkForLatestRelease().then(setAvailableRelease);
+  }, []);
+  useEffect(() => {
+    if (import.meta.env.VITE_TAURI !== "true") return;
+    const handleExternalLink = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest("a[href]");
+      if (!(link instanceof HTMLAnchorElement)) return;
+      const href = link.href;
+      if (!href || href.startsWith(window.location.origin)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void openExternalLink(href).catch((reason: unknown) =>
+        logger.warn("External link opening failed", reason),
+      );
+    };
+    document.addEventListener("click", handleExternalLink, true);
+    return () => document.removeEventListener("click", handleExternalLink, true);
   }, []);
   useEffect(() => {
     const handlePopState = () => setLegalPage(getLegalPage());
@@ -765,7 +787,7 @@ export function App() {
   }
 
   if (legalPage === "contact")
-    return <div className="app"><Header onHelp={() => setModal("help")} onSettings={() => setModal("settings")} /><ContactPage onBack={closeLegalPage} /><footer><span className="footer-credit">© 2026 HoloTransfer · Made with{" "}<Heart className="footer-heart" size={13} fill="currentColor" aria-label="love" /> by{" "}<a href="https://github.com/Ezzud" target="_blank" rel="noreferrer">Ezzud</a></span><div><button onClick={() => openLegalPage("privacy")}>Privacy</button><button onClick={() => openLegalPage("terms")}>Terms</button><button onClick={openContactPage}>Contact</button></div></footer>{modal && <Modal type={modal} dark={dark} setDark={setDark} maxSpeed={maxSpeed} setMaxSpeed={setMaxSpeed} speedUnit={speedUnit} setSpeedUnit={setSpeedUnit} onClose={() => setModal(null)} />}</div>;
+    return <div className="app"><Header onHelp={() => setModal("help")} onSettings={() => setModal("settings")} /><ContactPage onBack={closeLegalPage} /><footer><span className="footer-credit">© 2026 HoloTransfer · Made with{" "}<Heart className="footer-heart" size={13} fill="currentColor" aria-label="love" /> by{" "}<a href="https://github.com/Ezzud" target="_blank" rel="noreferrer">Ezzud</a></span><div><button onClick={() => openLegalPage("privacy")}>Privacy</button><button onClick={() => openLegalPage("terms")}>Terms</button><button onClick={openContactPage}>Contact</button></div></footer>{modal && <Modal type={modal} dark={dark} setDark={setDark} maxSpeed={maxSpeed} setMaxSpeed={setMaxSpeed} speedUnit={speedUnit} setSpeedUnit={setSpeedUnit} availableRelease={availableRelease} onClose={() => setModal(null)} />}</div>;
   if (legalPage === "privacy" || legalPage === "terms")
     return (
       <div className="app">
@@ -803,6 +825,7 @@ export function App() {
             setMaxSpeed={setMaxSpeed}
             speedUnit={speedUnit}
             setSpeedUnit={setSpeedUnit}
+            availableRelease={availableRelease}
             onClose={() => setModal(null)}
           />
         )}
@@ -950,6 +973,7 @@ export function App() {
           setMaxSpeed={setMaxSpeed}
           speedUnit={speedUnit}
           setSpeedUnit={setSpeedUnit}
+          availableRelease={availableRelease}
           onClose={() => setModal(null)}
         />
       )}

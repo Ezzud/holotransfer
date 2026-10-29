@@ -94,6 +94,7 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri -> apps/desktop/src-tauri/target
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @holotransfer/desktop tauri icon src-tauri/icons/icon.svg
       - name: Create Tauri environment
         run: node scripts/create-tauri-env.mjs
         env:
@@ -101,6 +102,7 @@ jobs:
           VITE_API_PREFIX: ${{ vars.VITE_API_PREFIX }}
           VITE_WS_URL: ${{ vars.VITE_WS_URL }}
           VITE_WS_PATH: ${{ vars.VITE_WS_PATH }}
+          LATEST_RELEASE_URL: ${{ vars.LATEST_RELEASE_URL }}
       - run: pnpm version:sync
       - run: pnpm --filter @holotransfer/desktop tauri build --ci --config src-tauri/tauri.conf.json --config src-tauri/${{ matrix.config }}
         env:
@@ -190,6 +192,7 @@ jobs:
             "ndk;27.0.12077973"
       - run: rustup target add aarch64-linux-android
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @holotransfer/desktop tauri icon src-tauri/icons/icon.svg
       - name: Create Tauri environment
         run: node scripts/create-tauri-env.mjs
         env:
@@ -197,6 +200,7 @@ jobs:
           VITE_API_PREFIX: ${{ vars.VITE_API_PREFIX }}
           VITE_WS_URL: ${{ vars.VITE_WS_URL }}
           VITE_WS_PATH: ${{ vars.VITE_WS_PATH }}
+          LATEST_RELEASE_URL: ${{ vars.LATEST_RELEASE_URL }}
       - run: pnpm version:sync
       - run: pnpm --filter @holotransfer/desktop tauri android init
       - name: Restore Android signing keystore
@@ -241,6 +245,7 @@ jobs:
           VITE_API_PREFIX: ${{ vars.VITE_API_PREFIX }}
           VITE_WS_URL: ${{ vars.VITE_WS_URL }}
           VITE_WS_PATH: ${{ vars.VITE_WS_PATH }}
+          LATEST_RELEASE_URL: ${{ vars.LATEST_RELEASE_URL }}
       - run: pnpm version:sync
       - run: pnpm --filter @holotransfer/desktop tauri ios init
       - run: pnpm --filter @holotransfer/desktop tauri ios build --debug

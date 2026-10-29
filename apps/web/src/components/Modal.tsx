@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ModalType, SpeedUnit } from "../types";
+import { getPlatformLabel } from "../services/platformService";
+import { openExternalLink } from "../services/externalLinkService";
+import type { AvailableRelease } from "../services/releaseService";
 
 /**
  * Renders an informational or settings overlay.
@@ -25,6 +28,7 @@ export function Modal({
   setMaxSpeed,
   speedUnit,
   setSpeedUnit,
+  availableRelease,
   onClose,
 }: {
   type: ModalType;
@@ -34,6 +38,7 @@ export function Modal({
   setMaxSpeed: (value: number) => void;
   speedUnit: SpeedUnit;
   setSpeedUnit: (value: SpeedUnit) => void;
+  availableRelease: AvailableRelease | null;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -130,6 +135,21 @@ export function Modal({
                     <option>GB/s</option>
                   </select>
                 </div>
+                {availableRelease && (
+                  <div className="release-warning" role="status">
+                    <strong>New version available: v{availableRelease.version}</strong>
+                    <button
+                      type="button"
+                      onClick={() => void openExternalLink(availableRelease.downloadUrl)}
+                    >
+                      Download latest version
+                    </button>
+                  </div>
+                )}
+                <p className="app-version">
+                  HoloTransfer v{import.meta.env.VITE_APP_VERSION ?? "unknown"} for{" "}
+                  {getPlatformLabel()}
+                </p>
               </div>
             </div>
           </>
