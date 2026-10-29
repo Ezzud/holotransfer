@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import {
   CircleCheck,
   FileKey,
+  Gauge,
   Link,
   Moon,
   ShieldCheck,
@@ -107,7 +108,9 @@ export function Modal({
                 </button>
               </label>
               <div className="setting-row speed-row">
-                <label htmlFor="max-speed">Max speed</label>
+                <label htmlFor="max-speed" className="setting-label">
+                  <Gauge size={18} /> Max speed
+                </label>
                 <div className="speed-controls">
                   <input
                     id="max-speed"
@@ -139,23 +142,23 @@ export function Modal({
                     <option>GB/s</option>
                   </select>
                 </div>
-                <label className="setting-row">
-                  <span className="setting-label">
-                    <ShieldCheck size={18} /> End-to-end encryption
-                  </span>
-                  <button
-                    className={`switch ${e2eEnabled ? "active" : ""}`}
-                    onClick={() => {
-                      const value = !e2eEnabled;
-                      setE2eEnabled(value);
-                      localStorage.setItem("e2e_enabled", JSON.stringify(value));
-                    }}
-                    aria-label="Toggle end-to-end encryption"
-                  >
-                    <span />
-                  </button>
-                </label>
               </div>
+              <label className="setting-row">
+                <span className="setting-label">
+                  <ShieldCheck size={18} /> End-to-end encryption
+                </span>
+                <button
+                  className={`switch ${e2eEnabled ? "active" : ""}`}
+                  onClick={() => {
+                    const value = !e2eEnabled;
+                    setE2eEnabled(value);
+                    localStorage.setItem("e2e_enabled", JSON.stringify(value));
+                  }}
+                  aria-label="Toggle end-to-end encryption"
+                >
+                  <span />
+                </button>
+              </label>
               <div className="release-info">
                 {availableRelease && (
                   <div className="release-warning" role="status">
