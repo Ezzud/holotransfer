@@ -31,38 +31,42 @@ writeFileSync(
 
 let gradle = readFileSync(gradlePath, "utf8");
 if (!gradle.includes("import java.io.FileInputStream")) {
-  gradle = `import java.io.FileInputStream\nimport java.util.Properties\n\n${gradle}`;
+  gradle = `import java.io.FileInputStream\n${gradle}`;
 }
 
-const signingConfig = `    create("release") {
-        val keystorePropertiesFile = rootProject.file("keystore.properties")
-        val keystoreProperties = Properties()
-        if (keystorePropertiesFile.exists()) {
-            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+const signingConfig = `    signingConfigs {
+        create("release") {
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            val keystoreProperties = Properties()
+            if (keystorePropertiesFile.exists()) {
+                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+            }
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
         }
-        keyAlias = keystoreProperties["keyAlias"] as String
-        keyPassword = keystoreProperties["keyPassword"] as String
-        storeFile = file(keystoreProperties["storeFile"] as String)
-        storePassword = keystoreProperties["storePassword"] as String
     }
 
 `;
 
-if (!gradle.includes('create("release")')) {
+if (!/signingConfigs \{\r?\n\s+create\("release"\)/.test(gradle)) {
   const buildTypesIndex = gradle.indexOf("buildTypes {");
   if (buildTypesIndex < 0) {
     throw new Error("Could not find Android buildTypes block.");
   }
-  gradle = `${gradle.slice(0, buildTypesIndex)}signingConfigs {\n${signingConfig}}${gradle.slice(buildTypesIndex)}`;
+  gradle = `${gradle.slice(0, buildTypesIndex)}${signingConfig}${gradle.slice(buildTypesIndex)}`;
 }
 
-const releaseBlock = /getByName\("release"\)\s*\{/;
+const releaseBlock = /getByName\("release"\)\s*\{\r?\n/;
 if (!releaseBlock.test(gradle)) {
   throw new Error("Could not find Android release build type.");
 }
-gradle = gradle.replace(
-  releaseBlock,
-  'getByName("release") {\n        signingConfig = signingConfigs.getByName("release")',
-);
+if (!gradle.includes('signingConfig = signingConfigs.getByName("release")')) {
+  gradle = gradle.replace(
+    releaseBlock,
+    'getByName("release") {\n            signingConfig = signingConfigs.getByName("release")\n',
+  );
+}
 writeFileSync(gradlePath, gradle, "utf8");
 console.log("Configured Android Gradle release signing.");
