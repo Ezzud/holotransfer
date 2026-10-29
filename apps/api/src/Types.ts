@@ -34,6 +34,7 @@ export type TransferPeer = {
   id: string;
   socket: WebSocket;
   role: TransferRole;
+  e2eEnabled: boolean;
 };
 
 export type TransferRoom = {

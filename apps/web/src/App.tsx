@@ -76,6 +76,7 @@ function combineChunks(
  */
 function restoreFileExtension(path: string, sourceName: string): string {
   const sourceBaseName = sourceName.split(/[\\/]/).pop() ?? sourceName;
+  if (/^(?:content|file):\/\//i.test(path)) return path;
   const sourceExtensionIndex = sourceBaseName.lastIndexOf(".");
   if (sourceExtensionIndex <= 0) return path;
   const sourceExtension = sourceBaseName.slice(sourceExtensionIndex);
@@ -501,6 +502,7 @@ export function App() {
       transferCode,
       clientId.current,
       role,
+      e2eEnabled,
       (message, activeSocket) => handleMessage(message, activeSocket, role),
       handleChunk,
       () => {
@@ -576,6 +578,23 @@ export function App() {
     activeSocket: WebSocket,
     role: TransferRole,
   ): void {
+    if (message.type === "e2ee-mismatch") {
+      peerRejectedForEncryption.current = true;
+      if (role === "receiver") {
+        goHome(
+          message.message ??
+            "The sender and receiver must use the same encryption setting.",
+        );
+      } else {
+        setSenderWaiting(false);
+        setError(
+          message.message ??
+            "The receiver could not join because encryption settings differ.",
+        );
+        setStep("send-file");
+      }
+      return;
+    }
     if (message.type === "e2ee-config" && typeof message.enabled === "boolean") {
       if (message.enabled !== e2eEnabled) {
         const reason =
@@ -1031,15 +1050,20 @@ export function App() {
         const { open } = await import("@tauri-apps/plugin-fs");
         const path = await save({
           defaultPath: currentFile.current.name,
+          filters: [
+            {
+              name: "Original file type",
+              extensions: currentFile.current.name.includes(".")
+                ? [currentFile.current.name.split(".").pop() ?? "*"]
+                : ["*"],
+            },
+          ],
         });
         if (!path) {
           setDecisionPending(false);
           return;
         }
-        const outputPath = restoreFileExtension(
-          path,
-          currentFile.current.name,
-        );
+        const outputPath = restoreFileExtension(path, currentFile.current.name);
         nativeSavePath.current = outputPath;
         nativeFileHandle.current = await open(outputPath, {
           write: true,

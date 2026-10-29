@@ -97,6 +97,7 @@ export class SocketManager {
     const code = (url.searchParams.get("code") ?? "").toUpperCase();
     const clientId = url.searchParams.get("client_id");
     const role = url.searchParams.get("role") as TransferRole;
+    const e2eEnabled = url.searchParams.get("e2e") === "1";
     const room = this.transfers.getRoom(code);
     if (
       !room ||
@@ -108,6 +109,21 @@ export class SocketManager {
       socket.close(4003, "Invalid transfer");
       return;
     }
+    const sender = [...room.peers.values()].find(
+      (peer) => peer.role === "sender",
+    );
+    if (role === "receiver" && sender && sender.e2eEnabled !== e2eEnabled) {
+      socket.send(
+        JSON.stringify({
+          type: "e2ee-mismatch",
+          message: sender.e2eEnabled
+            ? "Sender have end-to-end encryption enabled, either enable it too or make the sender device disable it in the settings"
+            : "Sender have end-to-end encryption disabled, either disable it too or make the sender device enable it in the settings",
+        }),
+      );
+      socket.close(4003, "E2E settings mismatch");
+      return;
+    }
     try {
       if (!(await this.clients.validateConnection(clientId))) {
         logger.warn("Rejected WebSocket client with unknown client_id", {
@@ -116,7 +132,7 @@ export class SocketManager {
         socket.close(4001, "Unknown client_id");
         return;
       }
-      this.transfers.addPeer(room, { id: clientId, socket, role });
+      this.transfers.addPeer(room, { id: clientId, socket, role, e2eEnabled });
     } catch (error: unknown) {
       logger.error("Unable to validate WebSocket client", error);
       socket.close(1011, "Client validation failed");

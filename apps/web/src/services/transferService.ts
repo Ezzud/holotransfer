@@ -65,6 +65,7 @@ export function connectTransfer(
   code: string,
   clientId: string,
   role: TransferRole,
+  e2eEnabled: boolean,
   onMessage: (message: TransferMessage, socket: WebSocket) => void,
   onBinary: (chunk: ArrayBuffer, socket: WebSocket) => void,
   onError: () => void,
@@ -75,7 +76,7 @@ export function connectTransfer(
     config.websocketUrl ||
     `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
   const socket = new WebSocket(
-    `${websocketUrl}${config.websocketPath}?code=${code}&client_id=${clientId}&role=${role}`,
+    `${websocketUrl}${config.websocketPath}?code=${code}&client_id=${clientId}&role=${role}&e2e=${e2eEnabled ? "1" : "0"}`,
   );
   socket.binaryType = "arraybuffer";
   socket.onopen = () => onOpen?.(socket);
