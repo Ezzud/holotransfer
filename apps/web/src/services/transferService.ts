@@ -1,6 +1,6 @@
-import type { FileInfo, TransferMessage, TransferRole } from '../types';
-import { logger } from './logger';
-import { config } from '../config';
+import type { FileInfo, TransferMessage, TransferRole } from "../types";
+import { logger } from "./logger";
+import { config } from "../config";
 
 /**
  * Registers the browser client ID with the API.
@@ -9,10 +9,10 @@ import { config } from '../config';
  */
 export async function registerClient(clientId: string): Promise<void> {
   const response = await fetch(`${config.apiUrl}${config.apiPrefix}/clients`, {
-    method: 'GET',
-    headers: { 'x-client-id': clientId }
+    method: "GET",
+    headers: { "x-client-id": clientId },
   });
-  if (!response.ok) await readResponse<void>(response, 'ok');
+  if (!response.ok) await readResponse<void>(response, "ok");
 }
 
 /**
@@ -21,9 +21,12 @@ export async function registerClient(clientId: string): Promise<void> {
  * @returns The created transfer code.
  */
 export async function createTransfer(clientId: string): Promise<string> {
-  logger.debug('Creating transfer room');
-  const response = await fetch(`${config.apiUrl}${config.apiPrefix}/transfers`, { method: 'POST', headers: { 'x-client-id': clientId } });
-  return readResponse<string>(response, 'code');
+  logger.debug("Creating transfer room");
+  const response = await fetch(
+    `${config.apiUrl}${config.apiPrefix}/transfers`,
+    { method: "POST", headers: { "x-client-id": clientId } },
+  );
+  return readResponse<string>(response, "code");
 }
 
 /**
@@ -32,14 +35,20 @@ export async function createTransfer(clientId: string): Promise<string> {
  * @param code User-entered transfer code.
  * @returns The normalized transfer code.
  */
-export async function joinTransfer(clientId: string, code: string): Promise<string> {
-  logger.debug('Joining transfer room', { code });
-  const response = await fetch(`${config.apiUrl}${config.apiPrefix}/transfers/join`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-client-id': clientId },
-    body: JSON.stringify({ code })
-  });
-  return readResponse<string>(response, 'code');
+export async function joinTransfer(
+  clientId: string,
+  code: string,
+): Promise<string> {
+  logger.debug("Joining transfer room", { code });
+  const response = await fetch(
+    `${config.apiUrl}${config.apiPrefix}/transfers/join`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-client-id": clientId },
+      body: JSON.stringify({ code }),
+    },
+  );
+  return readResponse<string>(response, "code");
 }
 
 /**
@@ -52,20 +61,30 @@ export async function joinTransfer(clientId: string, code: string): Promise<stri
  * @param onError Error callback.
  * @returns The open WebSocket.
  */
-export function connectTransfer(code: string, clientId: string, role: TransferRole, onMessage: (message: TransferMessage, socket: WebSocket) => void, onBinary: (chunk: ArrayBuffer, socket: WebSocket) => void, onError: () => void): WebSocket {
-  logger.info('Opening transfer socket', { code, role });
-  const socket = new WebSocket(`${config.websocketUrl}${config.websocketPath}?code=${code}&client_id=${clientId}&role=${role}`);
-  socket.binaryType = 'arraybuffer';
+export function connectTransfer(
+  code: string,
+  clientId: string,
+  role: TransferRole,
+  onMessage: (message: TransferMessage, socket: WebSocket) => void,
+  onBinary: (chunk: ArrayBuffer, socket: WebSocket) => void,
+  onError: () => void,
+): WebSocket {
+  logger.info("Opening transfer socket", { code, role });
+  const socket = new WebSocket(
+    `${config.websocketUrl}${config.websocketPath}?code=${code}&client_id=${clientId}&role=${role}`,
+  );
+  socket.binaryType = "arraybuffer";
   socket.onmessage = (event) => {
-    if (typeof event.data === 'string') onMessage(JSON.parse(event.data) as TransferMessage, socket);
+    if (typeof event.data === "string")
+      onMessage(JSON.parse(event.data) as TransferMessage, socket);
     else onBinary(event.data as ArrayBuffer, socket);
   };
   socket.onerror = () => {
-    logger.error('Transfer socket error', { code, role });
+    logger.error("Transfer socket error", { code, role });
     onError();
   };
   socket.onclose = () => {
-    logger.warn('Transfer socket closed', { code, role });
+    logger.warn("Transfer socket closed", { code, role });
     onError();
   };
   return socket;
@@ -78,7 +97,7 @@ export function connectTransfer(code: string, clientId: string, role: TransferRo
  * @returns Nothing.
  */
 export function sendMetadata(socket: WebSocket, file: FileInfo): void {
-  socket.send(JSON.stringify({ type: 'metadata', metadata: file }));
+  socket.send(JSON.stringify({ type: "metadata", metadata: file }));
 }
 
 /**
@@ -88,7 +107,11 @@ export function sendMetadata(socket: WebSocket, file: FileInfo): void {
  * @returns The requested response field.
  */
 async function readResponse<T>(response: Response, key: string): Promise<T> {
-  const data = await response.json() as { [key: string]: unknown; error?: string };
-  if (!response.ok) throw new Error(data.error ?? 'The transfer request failed.');
+  const data = (await response.json()) as {
+    [key: string]: unknown;
+    error?: string;
+  };
+  if (!response.ok)
+    throw new Error(data.error ?? "The transfer request failed.");
   return data[key] as T;
 }

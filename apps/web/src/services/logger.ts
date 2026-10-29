@@ -6,10 +6,14 @@ type LogMethod = (message: string, details?: unknown) => void;
  * @returns Human-readable detail text.
  */
 function formatDetails(details?: unknown): string {
-  if (!details || typeof details !== 'object') return details === undefined ? '' : String(details);
+  if (!details || typeof details !== "object")
+    return details === undefined ? "" : String(details);
   return Object.entries(details as Record<string, unknown>)
-    .map(([key, value]) => `${key}=${value instanceof Error ? value.message : String(value)}`)
-    .join(' ');
+    .map(
+      ([key, value]) =>
+        `${key}=${value instanceof Error ? value.message : String(value)}`,
+    )
+    .join(" ");
 }
 
 /**
@@ -20,24 +24,27 @@ function formatDetails(details?: unknown): string {
  * @returns Nothing.
  */
 function write(level: string, message: string, details?: unknown): void {
-  const timestamp = new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'Europe/Paris',
-    dateStyle: 'short',
-    timeStyle: 'medium'
+  const timestamp = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    dateStyle: "short",
+    timeStyle: "medium",
   }).format(new Date());
   const output = `[${timestamp}] [TransferMaster] ${level} ${message}${formatDetails(details)}`;
-  if (level === 'ERROR') console.error(output);
-  else if (level === 'WARN') console.warn(output);
+  if (level === "ERROR") console.error(output);
+  else if (level === "WARN") console.warn(output);
   else console.debug(output);
 }
 
 /**
  * Application logger for browser diagnostics.
  */
-export const logger: Record<'debug' | 'info' | 'success' | 'warn' | 'error', LogMethod> = {
-  debug: (message, details) => write('DEBUG', message, details),
-  info: (message, details) => write('INFO', message, details),
-  success: (message, details) => write('SUCCESS', message, details),
-  warn: (message, details) => write('WARN', message, details),
-  error: (message, details) => write('ERROR', message, details)
+export const logger: Record<
+  "debug" | "info" | "success" | "warn" | "error",
+  LogMethod
+> = {
+  debug: (message, details) => write("DEBUG", message, details),
+  info: (message, details) => write("INFO", message, details),
+  success: (message, details) => write("SUCCESS", message, details),
+  warn: (message, details) => write("WARN", message, details),
+  error: (message, details) => write("ERROR", message, details),
 };

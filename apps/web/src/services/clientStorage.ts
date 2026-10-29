@@ -3,7 +3,7 @@
  * @returns The local client identifier.
  */
 export function getClientId(): string {
-  const key = 'client_id';
+  const key = "client_id";
   const existing = localStorage.getItem(key);
   if (existing) return existing;
   const id = crypto.randomUUID();
@@ -15,18 +15,33 @@ export function getClientId(): string {
  * Reads the persisted speed preference.
  * @returns Speed value and unit.
  */
-export function getSpeedSetting(): { value: number; unit: 'KB/s' | 'MB/s' | 'GB/s' } {
-  const raw = localStorage.getItem('max_speed');
-  if (!raw) return { value: 0, unit: 'MB/s' };
+export function getSpeedSetting(): {
+  value: number;
+  unit: "KB/s" | "MB/s" | "GB/s";
+} {
+  const raw = localStorage.getItem("max_speed");
+  if (!raw) return { value: 0, unit: "MB/s" };
   try {
-    const setting = JSON.parse(raw) as { value?: number; unit?: 'KB/s' | 'MB/s' | 'GB/s' };
+    const setting = JSON.parse(raw) as {
+      value?: number;
+      unit?: "KB/s" | "MB/s" | "GB/s";
+    };
     return {
-      value: Number.isFinite(setting.value) && (setting.value ?? 0) >= 0 ? setting.value ?? 0 : 0,
-      unit: setting.unit === 'KB/s' || setting.unit === 'GB/s' ? setting.unit : 'MB/s'
+      value:
+        Number.isFinite(setting.value) && (setting.value ?? 0) >= 0
+          ? (setting.value ?? 0)
+          : 0,
+      unit:
+        setting.unit === "KB/s" || setting.unit === "GB/s"
+          ? setting.unit
+          : "MB/s",
     };
   } catch {
     const value = Number(raw);
-    return { value: Number.isFinite(value) && value >= 0 ? value : 0, unit: 'MB/s' };
+    return {
+      value: Number.isFinite(value) && value >= 0 ? value : 0,
+      unit: "MB/s",
+    };
   }
 }
 

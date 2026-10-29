@@ -5,10 +5,13 @@
  */
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
+  const units = ["KB", "MB", "GB", "TB"];
   let value = bytes;
   let unit = -1;
-  do { value /= 1024; unit++; } while (value >= 1024 && unit < units.length - 1);
+  do {
+    value /= 1024;
+    unit++;
+  } while (value >= 1024 && unit < units.length - 1);
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
 }
 
@@ -17,4 +20,6 @@ export function formatSize(bytes: number): string {
  * @param code Raw code.
  * @returns Spaced code.
  */
-export function readableCode(code: string): string { return code.match(/.{1,2}/g)?.join('-') ?? code; }
+export function readableCode(code: string): string {
+  return code.match(/.{1,2}/g)?.join("-") ?? code;
+}

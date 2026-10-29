@@ -1,6 +1,6 @@
-import type { TransferLogManager } from '../managers/transferLogManager.js';
-import type { TransferRoom } from '../models/transferRoom.js';
-import type { TransferState } from '../models/transferTypes.js';
+import type { TransferLogManager } from "../managers/transferLogManager.js";
+import type { TransferRoom } from "../models/transferRoom.js";
+import type { TransferState } from "../models/transferTypes.js";
 
 /**
  * Creates the controller used by transfer lifecycle handlers.
@@ -14,7 +14,10 @@ export function createTransferLogController(manager: TransferLogManager) {
    * @param state Lifecycle state.
    * @returns Promise resolving after the event is queued.
    */
-  return async function record(room: TransferRoom, state: TransferState): Promise<void> {
+  return async function record(
+    room: TransferRoom,
+    state: TransferState,
+  ): Promise<void> {
     await manager.record(room, state);
   };
 }

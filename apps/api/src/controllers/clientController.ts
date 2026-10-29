@@ -1,5 +1,5 @@
-import type { Request, Response } from 'express';
-import type { ClientManager } from '../managers/clientManager.js';
+import type { Request, Response } from "express";
+import type { ClientManager } from "../managers/clientManager.js";
 
 /**
  * Creates a controller for client lookup and connection tracking.
@@ -13,10 +13,13 @@ export function createClientController(manager: ClientManager) {
    * @param response Express response.
    * @returns HTTP response.
    */
-  return async function register(request: Request, response: Response): Promise<void> {
-    const clientId = request.header('x-client-id');
+  return async function register(
+    request: Request,
+    response: Response,
+  ): Promise<void> {
+    const clientId = request.header("x-client-id");
     if (!clientId) {
-      response.status(400).json({ error: 'A client_id is required.' });
+      response.status(400).json({ error: "A client_id is required." });
       return;
     }
     await manager.connect(clientId);

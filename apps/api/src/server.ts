@@ -1,22 +1,22 @@
-import cors from 'cors';
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import { createServer } from 'node:http';
-import type { AddressInfo } from 'node:net';
-import { WebSocket, WebSocketServer } from 'ws';
-import { TransferManager } from './managers/transferManager.js';
-import { TransferLogManager } from './managers/transferLogManager.js';
-import { createTransferController } from './controllers/createTransferController.js';
-import { joinTransferController } from './controllers/joinTransferController.js';
-import { createTransferLogController } from './controllers/transferLogController.js';
-import type { TransferRole } from './models/transferTypes.js';
-import { createDatabase, migrateDatabase } from './models/database.js';
-import { initializeTransferLogModel } from './models/TransferLog.js';
-import { initializeClientModel } from './models/Client.js';
-import { ClientManager } from './managers/clientManager.js';
-import { createClientController } from './controllers/clientController.js';
-import { logger } from './logger.js';
-import { config } from './config.js';
+import cors from "cors";
+import express from "express";
+import rateLimit from "express-rate-limit";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { WebSocket, WebSocketServer } from "ws";
+import { TransferManager } from "./managers/transferManager.js";
+import { TransferLogManager } from "./managers/transferLogManager.js";
+import { createTransferController } from "./controllers/createTransferController.js";
+import { joinTransferController } from "./controllers/joinTransferController.js";
+import { createTransferLogController } from "./controllers/transferLogController.js";
+import type { TransferRole } from "./models/transferTypes.js";
+import { createDatabase, migrateDatabase } from "./models/database.js";
+import { initializeTransferLogModel } from "./models/TransferLog.js";
+import { initializeClientModel } from "./models/Client.js";
+import { ClientManager } from "./managers/clientManager.js";
+import { createClientController } from "./controllers/clientController.js";
+import { logger } from "./logger.js";
+import { config } from "./config.js";
 
 const manager = new TransferManager();
 const database = createDatabase();
@@ -29,30 +29,50 @@ const createController = createTransferController(manager, clientManager);
 const joinController = joinTransferController(manager, clientManager);
 const clientController = createClientController(clientManager);
 const app = express();
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 const httpServer = createServer(app);
-const websocketServer = new WebSocketServer({ server: httpServer, path: config.websocketPath });
+const websocketServer = new WebSocketServer({
+  server: httpServer,
+  path: config.websocketPath,
+});
 const heartbeatIntervalMs = 20_000;
 const heartbeatMissLimit = 3;
-const socketHealth = new WeakMap<WebSocket, { missedPongs: number; code: string; clientId: string; role: TransferRole }>();
+const socketHealth = new WeakMap<
+  WebSocket,
+  { missedPongs: number; code: string; clientId: string; role: TransferRole }
+>();
 
 /**
  * Configures Express middleware and transfer routes.
  * @returns Nothing.
  */
 function configureHttp(): void {
-  app.use(cors({
-    origin: config.allowedOrigins,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-client-id'],
-    optionsSuccessStatus: 204
-  }));
-  app.use(express.json({ limit: '16kb' }));
+  app.use(
+    cors({
+      origin: config.allowedOrigins,
+      methods: ["GET", "POST", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "x-client-id"],
+      optionsSuccessStatus: 204,
+    }),
+  );
+  app.use(express.json({ limit: "16kb" }));
   app.use(createRateLimiter(120));
-  app.get('/health', (_request, response) => response.json({ ok: true }));
-  app.get(`${config.apiPrefix}/clients`, createRateLimiter(5, 1_000), clientController);
-  app.post(`${config.apiPrefix}/transfers`, createRateLimiter(3), createController);
-  app.post(`${config.apiPrefix}/transfers/join`, createRateLimiter(3), joinController);
+  app.get("/health", (_request, response) => response.json({ ok: true }));
+  app.get(
+    `${config.apiPrefix}/clients`,
+    createRateLimiter(5, 1_000),
+    clientController,
+  );
+  app.post(
+    `${config.apiPrefix}/transfers`,
+    createRateLimiter(3),
+    createController,
+  );
+  app.post(
+    `${config.apiPrefix}/transfers/join`,
+    createRateLimiter(3),
+    joinController,
+  );
 }
 
 /**
@@ -65,7 +85,10 @@ function createRateLimiter(limit: number, windowMs = 60_000) {
     windowMs,
     limit,
     standardHeaders: true,
-    handler: (_request, response) => response.status(429).json({ error: 'Too many requests. Try again in a minute.' })
+    handler: (_request, response) =>
+      response
+        .status(429)
+        .json({ error: "Too many requests. Try again in a minute." }),
   });
 }
 
@@ -74,10 +97,14 @@ function createRateLimiter(limit: number, windowMs = 60_000) {
  * @returns Nothing.
  */
 function scheduleRoomCleanup(): void {
-  setInterval(() => manager.expireRooms((room) => {
-    logger.warn('Transfer code expired', { code: room.code });
-    return logController(room, 'expired');
-  }), 60_000).unref();
+  setInterval(
+    () =>
+      manager.expireRooms((room) => {
+        logger.warn("Transfer code expired", { code: room.code });
+        return logController(room, "expired");
+      }),
+    60_000,
+  ).unref();
 }
 
 /**
@@ -92,13 +119,13 @@ function scheduleWebSocketHeartbeat(): void {
       if (!health) continue;
       health.missedPongs += 1;
       if (health.missedPongs >= heartbeatMissLimit) {
-        logger.warn('WebSocket socket terminated by heartbeat timeout', {
+        logger.warn("WebSocket socket terminated by heartbeat timeout", {
           code: health.code,
           clientId: health.clientId,
           role: health.role,
           missedPongs: health.missedPongs,
           timeoutMs: heartbeatIntervalMs * heartbeatMissLimit,
-          action: 'terminate'
+          action: "terminate",
         });
         socket.terminate();
         continue;
@@ -120,18 +147,18 @@ async function startServer(): Promise<void> {
     await transferLogManager.expireActiveTransfers();
     logger.info(`Database ready`);
   } catch (error) {
-    logger.error('Unable to initialize database', error);
+    logger.error("Unable to initialize database", error);
     process.exitCode = 1;
     return;
   }
   scheduleRoomCleanup();
   httpServer.listen(config.port, config.host, () => {
     const address = httpServer.address() as AddressInfo;
-    logger.info('TransferMaster API listening', {
+    logger.info("TransferMaster API listening", {
       host: address.address,
       port: address.port,
       apiPrefix: config.apiPrefix,
-      websocketPath: config.websocketPath
+      websocketPath: config.websocketPath,
     });
   });
 }
@@ -142,98 +169,165 @@ async function startServer(): Promise<void> {
  * @param request Upgrade request.
  * @returns Nothing.
  */
-async function handleConnection(socket: import('ws').WebSocket, request: import('node:http').IncomingMessage): Promise<void> {
-  const url = new URL(request.url ?? '', `http://${request.headers.host}`);
-  const code = (url.searchParams.get('code') ?? '').toUpperCase();
-  const clientId = url.searchParams.get('client_id');
-  const role = url.searchParams.get('role') as TransferRole;
+async function handleConnection(
+  socket: import("ws").WebSocket,
+  request: import("node:http").IncomingMessage,
+): Promise<void> {
+  const url = new URL(request.url ?? "", `http://${request.headers.host}`);
+  const code = (url.searchParams.get("code") ?? "").toUpperCase();
+  const clientId = url.searchParams.get("client_id");
+  const role = url.searchParams.get("role") as TransferRole;
   const room = manager.getRoom(code);
-  if (!room || !clientId || !['sender', 'receiver'].includes(role) || room.peers.size >= 2) {
-    logger.warn('Rejected WebSocket connection', { code, clientId, role });
-    socket.close(4003, 'Invalid transfer');
+  if (
+    !room ||
+    !clientId ||
+    !["sender", "receiver"].includes(role) ||
+    room.peers.size >= 2
+  ) {
+    logger.warn("Rejected WebSocket connection", { code, clientId, role });
+    socket.close(4003, "Invalid transfer");
     return;
   }
   try {
-    if (!await clientManager.validateConnection(clientId)) {
-      logger.warn('Rejected WebSocket client with unknown client_id', { clientId });
-      socket.close(4001, 'Unknown client_id');
+    if (!(await clientManager.validateConnection(clientId))) {
+      logger.warn("Rejected WebSocket client with unknown client_id", {
+        clientId,
+      });
+      socket.close(4001, "Unknown client_id");
       return;
     }
     manager.addPeer(room, { id: clientId, socket, role });
   } catch (error: unknown) {
-    logger.error('Unable to validate WebSocket client', error);
-    socket.close(1011, 'Client validation failed');
+    logger.error("Unable to validate WebSocket client", error);
+    socket.close(1011, "Client validation failed");
     return;
   }
-  logger.info('WebSocket peer connected', { code, clientId, role });
+  logger.info("WebSocket peer connected", { code, clientId, role });
   socketHealth.set(socket, { missedPongs: 0, code, clientId, role });
-  socket.on('pong', () => {
+  socket.on("pong", () => {
     const health = socketHealth.get(socket);
     if (health) health.missedPongs = 0;
   });
-  socket.send(JSON.stringify({ type: 'connected', role }));
+  socket.send(JSON.stringify({ type: "connected", role }));
   if (room.peers.size === 2) {
-    logger.success('Transfer devices connected', { code });
-    manager.relay(room, clientId, JSON.stringify({ type: 'peer-connected' }));
+    logger.success("Transfer devices connected", { code });
+    manager.relay(room, clientId, JSON.stringify({ type: "peer-connected" }));
   }
-  socket.on('message', (raw, isBinary) => {
+  socket.on("message", (raw, isBinary) => {
     if (isBinary) manager.relay(room, clientId, raw as Buffer);
     else {
       try {
         const message = JSON.parse(raw.toString());
-        if (message.type === 'metadata') {
+        if (message.type === "metadata") {
           const fileSize = message.metadata?.size;
-          if (typeof fileSize !== 'number' || !Number.isSafeInteger(fileSize) || fileSize <= 0 || fileSize > config.maxTransferSizeBytes) {
-            socket.send(JSON.stringify({ type: 'error', message: `Files must be between 1 byte and ${formatBytes(config.maxTransferSizeBytes)}.` }));
+          if (
+            typeof fileSize !== "number" ||
+            !Number.isSafeInteger(fileSize) ||
+            fileSize <= 0 ||
+            fileSize > config.maxTransferSizeBytes
+          ) {
+            socket.send(
+              JSON.stringify({
+                type: "error",
+                message: `Files must be between 1 byte and ${formatBytes(config.maxTransferSizeBytes)}.`,
+              }),
+            );
             return;
           }
-          logger.info('File offered', { code, filename: message.metadata?.name, fileSize });
+          logger.info("File offered", {
+            code,
+            filename: message.metadata?.name,
+            fileSize,
+          });
         }
-        if (message.type === 'accepted') logger.success('Transfer confirmed by receiver', { code, clientId });
-        if (message.type === 'denied') logger.warn('Transfer refused by receiver', { code, clientId });
-        if (message.type === 'sender-disconnected') {
-          logger.warn('Sender disconnected; expiring transfer code', { code, clientId });
-          void logController(room, 'expired');
-          manager.expireRoom(room, 'The sender disconnected. This transfer has ended.');
+        if (message.type === "accepted")
+          logger.success("Transfer confirmed by receiver", { code, clientId });
+        if (message.type === "denied")
+          logger.warn("Transfer refused by receiver", { code, clientId });
+        if (message.type === "sender-disconnected") {
+          logger.warn("Sender disconnected; expiring transfer code", {
+            code,
+            clientId,
+          });
+          void logController(room, "expired");
+          manager.expireRoom(
+            room,
+            "The sender disconnected. This transfer has ended.",
+          );
           return;
         }
-        if (message.type === 'keepalive') {
+        if (message.type === "keepalive") {
           manager.touchRoom(room);
           return;
         }
         const state = manager.applyMessage(room, message);
         if (state) {
           void logController(room, state);
-          if (state === 'completed') logger.success('Transfer completed', { code });
-          if (state === 'transferring') logger.info('Transfer started', { code });
+          if (state === "completed")
+            logger.success("Transfer completed", { code });
+          if (state === "transferring")
+            logger.info("Transfer started", { code });
         }
         manager.relay(room, clientId, raw.toString());
-      }
-      catch (error) {
-        logger.warn('Malformed WebSocket message', { code, clientId, error });
-        socket.send(JSON.stringify({ type: 'error', message: 'Malformed transfer message.' }));
+      } catch (error) {
+        logger.warn("Malformed WebSocket message", { code, clientId, error });
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            message: "Malformed transfer message.",
+          }),
+        );
       }
     }
   });
-  socket.on('close', (closeCode, closeReason) => {
-    if (role === 'sender' && manager.getRoom(code) === room && room.peers.size > 1) {
-      logger.warn('Sender connection closed; expiring transfer code', { code, clientId, closeCode, closeReason: closeReason.toString() });
-      void logController(room, 'expired');
-      manager.expireRoom(room, 'The sender disconnected. This transfer has ended.');
+  socket.on("close", (closeCode, closeReason) => {
+    if (
+      role === "sender" &&
+      manager.getRoom(code) === room &&
+      room.peers.size > 1
+    ) {
+      logger.warn("Sender connection closed; expiring transfer code", {
+        code,
+        clientId,
+        closeCode,
+        closeReason: closeReason.toString(),
+      });
+      void logController(room, "expired");
+      manager.expireRoom(
+        room,
+        "The sender disconnected. This transfer has ended.",
+      );
       return;
     }
-    if (role === 'receiver' && manager.getRoom(code) === room && room.peers.size > 1) {
-      logger.warn('Receiver connection closed; expiring transfer code', { code, clientId, closeCode, closeReason: closeReason.toString() });
-      void logController(room, 'expired');
-      manager.expireRoom(room, 'The receiver disconnected. This transfer has ended.');
+    if (
+      role === "receiver" &&
+      manager.getRoom(code) === room &&
+      room.peers.size > 1
+    ) {
+      logger.warn("Receiver connection closed; expiring transfer code", {
+        code,
+        clientId,
+        closeCode,
+        closeReason: closeReason.toString(),
+      });
+      void logController(room, "expired");
+      manager.expireRoom(
+        room,
+        "The receiver disconnected. This transfer has ended.",
+      );
       return;
     }
     manager.removePeer(room, clientId);
-    logger.info('WebSocket peer disconnected', { code, clientId, closeCode, closeReason: closeReason.toString() });
+    logger.info("WebSocket peer disconnected", {
+      code,
+      clientId,
+      closeCode,
+      closeReason: closeReason.toString(),
+    });
   });
 }
 
-websocketServer.on('connection', handleConnection);
+websocketServer.on("connection", handleConnection);
 scheduleWebSocketHeartbeat();
 void startServer();
 

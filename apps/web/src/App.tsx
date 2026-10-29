@@ -592,7 +592,13 @@ export function App() {
         <footer>
           <span className="footer-credit">
             © 2026 TransferMaster · Made with{" "}
-            <Heart className="footer-heart" size={13} fill="currentColor" aria-label="love" /> by{" "}
+            <Heart
+              className="footer-heart"
+              size={13}
+              fill="currentColor"
+              aria-label="love"
+            />{" "}
+            by{" "}
             <a href="https://github.com/Ezzud" target="_blank" rel="noreferrer">
               Ezzud
             </a>
@@ -849,7 +855,13 @@ export function App() {
       <footer>
         <span className="footer-credit">
           © 2026 TransferMaster · Made with{" "}
-          <Heart className="footer-heart" size={13} fill="currentColor" aria-label="love" /> by{" "}
+          <Heart
+            className="footer-heart"
+            size={13}
+            fill="currentColor"
+            aria-label="love"
+          />{" "}
+          by{" "}
           <a href="https://github.com/Ezzud" target="_blank" rel="noreferrer">
             Ezzud
           </a>

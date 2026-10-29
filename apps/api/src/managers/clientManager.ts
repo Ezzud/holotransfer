@@ -1,4 +1,4 @@
-import { Client } from '../models/Client.js';
+import { Client } from "../models/Client.js";
 
 /**
  * Manages database-backed anonymous client identities.
@@ -33,7 +33,7 @@ export class ClientManager {
     const now = new Date();
     const [client] = await Client.findOrCreate({
       where: { clientId },
-      defaults: { clientId, createdAt: now, lastConnectedAt: now }
+      defaults: { clientId, createdAt: now, lastConnectedAt: now },
     });
     if (client.lastConnectedAt.getTime() !== now.getTime()) {
       await client.update({ lastConnectedAt: now });
