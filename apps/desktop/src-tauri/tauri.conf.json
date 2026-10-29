@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost https://api.holotransfer.app https://api.github.com; connect-src 'self' ipc: http://ipc.localhost https://api.holotransfer.app https://api.github.com wss://api.holotransfer.app; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+      "csp": "default-src 'self' ipc: http://ipc.localhost https://api.holotransfer.app https://transfer-api.ezzud.fr https://api.github.com; connect-src 'self' ipc: http://ipc.localhost https://api.holotransfer.app https://transfer-api.ezzud.fr https://api.github.com wss://api.holotransfer.app wss://transfer-api.ezzud.fr; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
     }
   },
   "bundle": {

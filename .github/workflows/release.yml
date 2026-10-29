@@ -192,7 +192,6 @@ jobs:
             "ndk;27.0.12077973"
       - run: rustup target add aarch64-linux-android
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @holotransfer/desktop tauri icon src-tauri/icons/icon.svg
       - name: Create Tauri environment
         run: node scripts/create-tauri-env.mjs
         env:
@@ -203,6 +202,7 @@ jobs:
           LATEST_RELEASE_URL: ${{ vars.LATEST_RELEASE_URL }}
       - run: pnpm version:sync
       - run: pnpm --filter @holotransfer/desktop tauri android init
+      - run: pnpm --filter @holotransfer/desktop tauri icon src-tauri/icons/icon.svg
       - name: Restore Android signing keystore
         shell: bash
         run: |
