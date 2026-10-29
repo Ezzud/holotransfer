@@ -681,15 +681,6 @@ export function App() {
     }
     receivedBytes.current += chunk.byteLength;
     transferStartedAt.current ??= performance.now();
-    try {
-      await downloadWriteQueue.current;
-    } catch (reason: unknown) {
-      logger.error("Unable to write received file chunk", reason);
-      const message = "Unable to save the received file.";
-      activeSocket.send(JSON.stringify({ type: "error", message }));
-      goHome(message);
-      return;
-    }
     transferredBytes.current = receivedBytes.current;
     setProgress(
       Math.min(99, Math.round((receivedBytes.current / metadata.size) * 100)),
