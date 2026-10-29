@@ -10,11 +10,17 @@ services:
       PORT: 43827
       API_PREFIX: /api
       WS_PATH: /transfer
-      CLIENT_ORIGINS: ${CLIENT_ORIGINS:-http://localhost:${VITE_PORT:-51739}}
+      CLIENT_ORIGINS: ${CLIENT_ORIGINS:-*}
       DATABASE_STORAGE: /app/data/database.sqlite
       MAX_TRANSFER_SIZE_BYTES: ${MAX_TRANSFER_SIZE_BYTES:-107374182400}
     ports:
       - "${API_PORT:-43827}:43827"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:43827/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
       - api-data:/app/data
     restart: unless-stopped
@@ -31,7 +37,8 @@ services:
     ports:
       - "${VITE_PORT:-51739}:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

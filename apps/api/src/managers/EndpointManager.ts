@@ -40,7 +40,17 @@ export class EndpointManager {
     this.application.set("trust proxy", 1);
     this.application.use(
       cors({
-        origin: config.allowedOrigins,
+        origin: (requestOrigin, callback) => {
+          if (
+            !requestOrigin ||
+            config.allowedOrigins.includes("*") ||
+            config.allowedOrigins.includes(requestOrigin)
+          ) {
+            callback(null, true);
+            return;
+          }
+          callback(null, false);
+        },
         methods: ["GET", "POST", "OPTIONS"],
         allowedHeaders: ["Content-Type", "x-client-id"],
         optionsSuccessStatus: 204,
