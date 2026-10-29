@@ -42,7 +42,7 @@ export function HomeView({
           </strong>
         </div>
         <p>
-          Fast transfers between your devices. Nothing is stored on our servers.
+          Fast transfers between your devices. That's all
         </p>
       </section>
       <section className="action-grid">
