@@ -5,9 +5,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "start": "pnpm build && pnpm exec serve -s dist -l ${VITE_PORT:-51739}",
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.14.1",
     "@vitejs/plugin-react": "^4.4.1",
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",

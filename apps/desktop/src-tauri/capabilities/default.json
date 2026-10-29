@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default HoloTransfer desktop permissions",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "process:default",
+    "updater:default"
+  ]
+}

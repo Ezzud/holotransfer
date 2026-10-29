@@ -5,3 +5,9 @@ dist/
 apps/api/data/
 .env
 !.env.example
+.env.tauri
+**/.env.tauri
+
+# Tauri generated files
+**/target/
+apps/desktop/src-tauri/gen/

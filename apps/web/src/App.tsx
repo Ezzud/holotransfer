@@ -26,6 +26,7 @@ import {
   sendMetadata,
 } from "./services/transferService";
 import { logger } from "./services/logger";
+import { checkForAppUpdate } from "./services/updaterService";
 import {
   decryptChunk,
   deriveTransferKey,
@@ -96,6 +97,9 @@ export function App() {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
+  useEffect(() => {
+    void checkForAppUpdate();
+  }, []);
   useEffect(() => {
     const handlePopState = () => setLegalPage(getLegalPage());
     window.addEventListener("popstate", handlePopState);
