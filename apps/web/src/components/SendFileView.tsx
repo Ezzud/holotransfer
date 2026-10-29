@@ -9,6 +9,7 @@ type SendFileViewProps = {
   file: FileInfo | null;
   inputRef: RefObject<HTMLInputElement | null>;
   encryptionReady: boolean;
+  encryptionEnabled: boolean;
   onBack: () => void;
   onSelect: (selectedFile?: File) => void;
   onUpload: () => void;
@@ -24,6 +25,7 @@ export function SendFileView({
   file,
   inputRef,
   encryptionReady,
+  encryptionEnabled,
   onBack,
   onSelect,
   onUpload,
@@ -35,6 +37,13 @@ export function SendFileView({
         title="Waiting for the sender"
         subtitle="The sender can now select a file to send to this device."
       >
+        {!encryptionEnabled && (
+          <div className="transfer-warning">
+            This transfer is not protected by end-to-end encryption, the host
+            of this website may be able to see this data. HoloTransfer is made
+            so its not directly stored on the server but still be careful.
+          </div>
+        )}
         <div className="waiting">
           <span className="pulse" /> Waiting for the sender to choose a file…
         </div>
@@ -52,6 +61,13 @@ export function SendFileView({
       subtitle="Your file stays on this device until you start the upload."
     >
       <DropZone inputRef={inputRef} onSelect={onSelect} file={file} />
+      {!encryptionEnabled && (
+        <div className="transfer-warning">
+          This transfer is not protected by end-to-end encryption, the host of
+          this website may be able to see this data. HoloTransfer is made so its
+          not directly stored on the server but still be careful.
+        </div>
+      )}
       <button
         className="button purple-button"
         disabled={!file || !encryptionReady}

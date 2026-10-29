@@ -50,9 +50,40 @@ import type {
   TransferRole,
 } from "./types";
 
-const transferChunkSize = 4 * 1024 * 1024;
-const transferWindowSize = 64 * 1024 * 1024;
-const nativeWriteBatchSize = 16 * 1024 * 1024;
+const transferChunkSize = 2 * 1024 * 1024;
+const transferWindowSize = 32 * 1024 * 1024;
+const nativeWriteBatchSize = 8 * 1024 * 1024;
+
+/**
+ * Keeps the selected output filename's extension aligned with the source file.
+ * @param path User-selected output path.
+ * @param sourceName Original filename.
+ * @returns Output path with the original extension.
+ */
+function restoreFileExtension(path: string, sourceName: string): string {
+  const sourceBaseName = sourceName.split(/[\\/]/).pop() ?? sourceName;
+  const sourceExtensionIndex = sourceBaseName.lastIndexOf(".");
+  if (sourceExtensionIndex <= 0) return path;
+  const sourceExtension = sourceBaseName.slice(sourceExtensionIndex);
+  const separatorIndex = Math.max(
+    path.lastIndexOf("/"),
+    path.lastIndexOf("\\"),
+  );
+  const directory = path.slice(0, separatorIndex + 1);
+  const selectedName = path.slice(separatorIndex + 1);
+  const selectedExtensionIndex = selectedName.lastIndexOf(".");
+  const selectedStem =
+    selectedExtensionIndex > 0
+      ? selectedName.slice(0, selectedExtensionIndex)
+      : selectedName;
+  const selectedExtension =
+    selectedExtensionIndex > 0
+      ? selectedName.slice(selectedExtensionIndex)
+      : "";
+  if (selectedExtension.toLowerCase() === sourceExtension.toLowerCase())
+    return path;
+  return `${directory}${selectedStem}${sourceExtension}`;
+}
 
 /**
  * Renders the main HoloTransfer application.
@@ -86,6 +117,9 @@ export function App() {
   const speedSetting = getSpeedSetting();
   const [maxSpeed, setMaxSpeed] = useState(speedSetting.value);
   const [speedUnit, setSpeedUnit] = useState<SpeedUnit>(speedSetting.unit);
+  const [e2eEnabled, setE2eEnabled] = useState(
+    localStorage.getItem("e2e_enabled") !== "false",
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const clientId = useRef(localStorage.getItem("client_id") ?? "");
   const [clientReady, setClientReady] = useState(false);
@@ -109,7 +143,7 @@ export function App() {
   const receivedChunkCount = useRef(0);
   const receivedDecryptSequence = useRef(0);
   const decryptQueues = useRef<Promise<void>[]>(
-    Array.from({ length: 4 }, () => Promise.resolve()),
+    Array.from({ length: 2 }, () => Promise.resolve()),
   );
   const receiveChunkQueue = useRef(Promise.resolve());
   const encryptionKeyPair = useRef<CryptoKeyPair | null>(null);
@@ -315,7 +349,7 @@ export function App() {
     pendingWriteChunks.current = [];
     pendingWriteBytes.current = 0;
     writtenFileBytes.current = 0;
-    decryptQueues.current = Array.from({ length: 4 }, () =>
+    decryptQueues.current = Array.from({ length: 2 }, () =>
       Promise.resolve(),
     );
     setPendingAction(null);
@@ -459,7 +493,9 @@ export function App() {
           );
       },
       (activeSocket) => {
-        void initializeEncryption(activeSocket);
+        sendEncryptionConfig(activeSocket);
+        if (e2eEnabled) void initializeEncryption(activeSocket);
+        else setEncryptionReady(true);
       },
     );
   }
@@ -482,6 +518,13 @@ export function App() {
 
   }
 
+  function sendEncryptionConfig(activeSocket: WebSocket): void {
+    if (activeSocket.readyState === WebSocket.OPEN)
+      activeSocket.send(
+        JSON.stringify({ type: "e2ee-config", enabled: e2eEnabled }),
+      );
+  }
+
   /**
    * Sends the local public key after the peer is available.
    * @param activeSocket Connected transfer socket.
@@ -489,6 +532,7 @@ export function App() {
    * @returns Nothing.
    */
   function sendEncryptionPublicKey(activeSocket: WebSocket, reason: string): void {
+    if (!e2eEnabled) return;
     const key = encryptionPublicKey.current;
     if (!key || activeSocket.readyState !== WebSocket.OPEN) {
       logger.warn("Unable to send E2EE public key", {
@@ -514,6 +558,23 @@ export function App() {
     activeSocket: WebSocket,
     role: TransferRole,
   ): void {
+    if (message.type === "e2ee-config" && typeof message.enabled === "boolean") {
+      if (message.enabled !== e2eEnabled) {
+        const reason =
+          role === "receiver" && !message.enabled
+            ? "Sender have end-to-end encryption disabled, either disable it too or make the sender device enable it in the settings"
+            : role === "sender" && !message.enabled
+              ? "Receiver have end-to-end encryption disabled, either disable it too or make the receiver device enable it in the settings"
+              : "The other device has end-to-end encryption enabled, either enable it too or disable it in the settings";
+        goHome(
+          reason,
+        );
+        activeSocket.close();
+        return;
+      }
+      if (!e2eEnabled) setEncryptionReady(true);
+      return;
+    }
     if (message.type === "e2ee-key" && message.key) {
       logger.info("Received E2EE public key");
       void establishEncryption(message.key);
@@ -539,7 +600,7 @@ export function App() {
       receivedBytes.current = 0;
       receivedChunkCount.current = 0;
       receivedDecryptSequence.current = 0;
-      decryptQueues.current = Array.from({ length: 4 }, () =>
+      decryptQueues.current = Array.from({ length: 2 }, () =>
         Promise.resolve(),
       );
       downloadWriteQueue.current = Promise.resolve();
@@ -935,8 +996,12 @@ export function App() {
           setDecisionPending(false);
           return;
         }
-        nativeSavePath.current = path;
-        nativeFileHandle.current = await open(path, {
+        const outputPath = restoreFileExtension(
+          path,
+          currentFile.current.name,
+        );
+        nativeSavePath.current = outputPath;
+        nativeFileHandle.current = await open(outputPath, {
           write: true,
           create: true,
           truncate: true,
@@ -992,7 +1057,7 @@ export function App() {
   }
 
   if (legalPage === "contact")
-    return <div className="app"><Header onHelp={() => setModal("help")} onSettings={() => setModal("settings")} /><ContactPage onBack={closeLegalPage} /><footer><span className="footer-credit">© 2026 HoloTransfer · Made with{" "}<Heart className="footer-heart" size={13} fill="currentColor" aria-label="love" /> by{" "}<a href="https://github.com/Ezzud" target="_blank" rel="noreferrer">Ezzud</a></span><div><button onClick={() => openLegalPage("privacy")}>Privacy</button><button onClick={() => openLegalPage("terms")}>Terms</button><button onClick={openContactPage}>Contact</button></div></footer>{modal && <Modal type={modal} dark={dark} setDark={setDark} maxSpeed={maxSpeed} setMaxSpeed={setMaxSpeed} speedUnit={speedUnit} setSpeedUnit={setSpeedUnit} availableRelease={availableRelease} onClose={() => setModal(null)} />}</div>;
+    return <div className="app"><Header onHelp={() => setModal("help")} onSettings={() => setModal("settings")} /><ContactPage onBack={closeLegalPage} /><footer><span className="footer-credit">© 2026 HoloTransfer · Made with{" "}<Heart className="footer-heart" size={13} fill="currentColor" aria-label="love" /> by{" "}<a href="https://github.com/Ezzud" target="_blank" rel="noreferrer">Ezzud</a></span><div><button onClick={() => openLegalPage("privacy")}>Privacy</button><button onClick={() => openLegalPage("terms")}>Terms</button><button onClick={openContactPage}>Contact</button></div></footer>{modal &&     <Modal type={modal} dark={dark} setDark={setDark} maxSpeed={maxSpeed} setMaxSpeed={setMaxSpeed} e2eEnabled={e2eEnabled} setE2eEnabled={setE2eEnabled} speedUnit={speedUnit} setSpeedUnit={setSpeedUnit} availableRelease={availableRelease} onClose={() => setModal(null)} />}</div>;
   if (legalPage === "privacy" || legalPage === "terms")
     return (
       <div className="app">
@@ -1028,6 +1093,8 @@ export function App() {
             setDark={setDark}
             maxSpeed={maxSpeed}
             setMaxSpeed={setMaxSpeed}
+            e2eEnabled={e2eEnabled}
+            setE2eEnabled={setE2eEnabled}
             speedUnit={speedUnit}
             setSpeedUnit={setSpeedUnit}
             availableRelease={availableRelease}
@@ -1084,6 +1151,7 @@ export function App() {
               file={file}
               inputRef={inputRef}
               encryptionReady={encryptionReady}
+              encryptionEnabled={e2eEnabled}
               onBack={() =>
                 goHome("", role === "receiver" ? "send" : "receive")
               }
@@ -1109,6 +1177,7 @@ export function App() {
               senderWaiting={senderWaiting}
               writingFile={writingFile}
               writeProgress={writeProgress}
+              encryptionEnabled={e2eEnabled}
               onBack={() =>
                 goHome("", role === "receiver" ? "send" : "receive")
               }
@@ -1177,6 +1246,8 @@ export function App() {
           setDark={setDark}
           maxSpeed={maxSpeed}
           setMaxSpeed={setMaxSpeed}
+          e2eEnabled={e2eEnabled}
+          setE2eEnabled={setE2eEnabled}
           speedUnit={speedUnit}
           setSpeedUnit={setSpeedUnit}
           availableRelease={availableRelease}

@@ -26,6 +26,8 @@ export function Modal({
   setDark,
   maxSpeed,
   setMaxSpeed,
+  e2eEnabled,
+  setE2eEnabled,
   speedUnit,
   setSpeedUnit,
   availableRelease,
@@ -36,6 +38,8 @@ export function Modal({
   setDark: (value: boolean) => void;
   maxSpeed: number;
   setMaxSpeed: (value: number) => void;
+  e2eEnabled: boolean;
+  setE2eEnabled: (value: boolean) => void;
   speedUnit: SpeedUnit;
   setSpeedUnit: (value: SpeedUnit) => void;
   availableRelease: AvailableRelease | null;
@@ -135,6 +139,22 @@ export function Modal({
                     <option>GB/s</option>
                   </select>
                 </div>
+                <label className="setting-row">
+                  <span className="setting-label">
+                    <ShieldCheck size={18} /> End-to-end encryption
+                  </span>
+                  <button
+                    className={`switch ${e2eEnabled ? "active" : ""}`}
+                    onClick={() => {
+                      const value = !e2eEnabled;
+                      setE2eEnabled(value);
+                      localStorage.setItem("e2e_enabled", JSON.stringify(value));
+                    }}
+                    aria-label="Toggle end-to-end encryption"
+                  >
+                    <span />
+                  </button>
+                </label>
               </div>
               <div className="release-info">
                 {availableRelease && (

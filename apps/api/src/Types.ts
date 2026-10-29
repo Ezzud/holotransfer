@@ -27,6 +27,7 @@ export type TransferMessage = {
   metadata?: TransferMetadata;
   state?: TransferState;
   bytes?: number;
+  enabled?: boolean;
 };
 
 export type TransferPeer = {

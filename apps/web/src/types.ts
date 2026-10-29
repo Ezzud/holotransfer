@@ -15,5 +15,6 @@ export type TransferMessage = {
   message?: string;
   key?: string;
   bytes?: number;
+  enabled?: boolean;
 };
 export type PendingAction = "send" | "receive" | null;

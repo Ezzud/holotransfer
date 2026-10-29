@@ -12,6 +12,7 @@ type TransferProgressViewProps = {
   senderWaiting: boolean;
   writingFile: boolean;
   writeProgress: number;
+  encryptionEnabled: boolean;
   onBack: () => void;
 };
 
@@ -29,6 +30,7 @@ export function TransferProgressView({
   senderWaiting,
   writingFile,
   writeProgress,
+  encryptionEnabled,
   onBack,
 }: TransferProgressViewProps) {
   return (
@@ -38,6 +40,13 @@ export function TransferProgressView({
       subtitle="Keep this tab open while the transfer is in progress."
     >
       <FileSummary file={file} />
+      {!encryptionEnabled && (
+        <div className="transfer-warning">
+          This transfer is not protected by end-to-end encryption, the host of
+          this website may be able to see this data. HoloTransfer is made so its
+          not directly stored on the server but still be careful.
+        </div>
+      )}
       {senderWaiting && (
         <div className="waiting-confirmation">
           <LoaderCircle className="spin" size={18} /> Waiting for the receiver
@@ -46,7 +55,7 @@ export function TransferProgressView({
       )}
       <div className="progress-percentage">
         {writingFile && role === "receiver"
-          ? `${writeProgress}% written`
+          ? `Writing file...`
           : timeRemaining === "00:00:00"
           ? role === "sender"
             ? "Waiting for receiver"
