@@ -9,7 +9,7 @@ import { Header } from './components/Header';
 import { HomeView } from './components/HomeView';
 import { Modal } from './components/Modal';
 import { LegalPage } from './components/LegalPage';
-import { getClientId, getSpeedSetting } from './services/clientStorage';
+import { getSpeedSetting } from './services/clientStorage';
 import { connectTransfer, createTransfer, joinTransfer, registerClient, sendMetadata } from './services/transferService';
 import { logger } from './services/logger';
 import type { FileInfo, ModalType, PendingAction, SpeedUnit, Step, TransferMessage, TransferRole } from './types';
@@ -38,7 +38,9 @@ export function App() {
   const [maxSpeed, setMaxSpeed] = useState(speedSetting.value);
   const [speedUnit, setSpeedUnit] = useState<SpeedUnit>(speedSetting.unit);
   const inputRef = useRef<HTMLInputElement>(null);
-  const clientId = useRef(getClientId());
+  const clientId = useRef(localStorage.getItem('client_id') ?? '');
+  const [clientReady, setClientReady] = useState(false);
+  const [clientLoading, setClientLoading] = useState(true);
   const socket = useRef<WebSocket | null>(null);
   const selectedFile = useRef<File | null>(null);
   const currentFile = useRef<FileInfo | null>(null);
@@ -53,7 +55,27 @@ export function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-  useEffect(() => { void registerClient(clientId.current).catch((reason: unknown) => logger.error('Client registration failed', reason)); }, []);
+  useEffect(() => {
+    let active = true;
+    async function initializeClient(): Promise<void> {
+      try {
+        setClientLoading(true);
+        const id = clientId.current || crypto.randomUUID();
+        await registerClient(id);
+        if (!active) return;
+        clientId.current = id;
+        localStorage.setItem('client_id', id);
+        setClientReady(true);
+      } catch (reason: unknown) {
+        logger.error('Client registration failed', reason);
+        if (active) setError('Unable to initialize this device. Please refresh the page and try again.');
+      } finally {
+        if (active) setClientLoading(false);
+      }
+    }
+    void initializeClient();
+    return () => { active = false; };
+  }, []);
   useEffect(() => () => socket.current?.close(), []);
   useEffect(() => {
     if (step !== 'transfer') return;
@@ -161,6 +183,7 @@ export function App() {
    * @returns A promise that resolves after room creation.
    */
   async function startSending(): Promise<void> {
+    if (!clientReady) return;
     logger.info('Starting send flow');
     setPendingAction('send');
     await runRequest(async () => { const transferCode = await createTransfer(clientId.current); setCode(transferCode); setStep('send-code'); openSocket(transferCode, 'sender'); });
@@ -172,6 +195,7 @@ export function App() {
    * @returns A promise that resolves after joining.
    */
   async function startReceiving(): Promise<void> {
+    if (!clientReady) return;
     logger.info('Starting receive flow');
     setPendingAction('receive');
     await runRequest(async () => { const transferCode = await joinTransfer(clientId.current, joinCode); setCode(transferCode); openSocket(transferCode, 'receiver'); });
@@ -332,7 +356,7 @@ export function App() {
 
   if (legalPage) return <div className="app"><Header onHelp={() => setModal('help')} onSettings={() => setModal('settings')} /><LegalPage type={legalPage} onBack={closeLegalPage} /><footer><span>© 2026 TransferMaster</span><div><button onClick={() => openLegalPage('privacy')}>Privacy</button><button onClick={() => openLegalPage('terms')}>Terms</button></div></footer>{modal && <Modal type={modal} dark={dark} setDark={setDark} maxSpeed={maxSpeed} setMaxSpeed={setMaxSpeed} speedUnit={speedUnit} setSpeedUnit={setSpeedUnit} onClose={() => setModal(null)} />}</div>;
   return <div className="app"><Header onHelp={() => setModal('help')} onSettings={() => setModal('settings')} /><main>
-    {step === 'home' && <HomeView onSend={startSending} onReceive={() => { setError(''); setStep('send-code'); }} pendingAction={pendingAction} />}
+    {step === 'home' && <HomeView onSend={startSending} onReceive={() => { if (!clientReady) return; setError(''); setStep('send-code'); }} pendingAction={pendingAction} clientReady={clientReady} clientLoading={clientLoading} />}
     {step === 'send-code' && <Card onBack={() => goHome()} title="Connect a device" subtitle={code ? 'Waiting for another device to connect using the code' : 'Enter the sender’s code to connect.'}>{code && <div className="code">{readableCode(code)}</div>}{!code ? <><label>Transfer code</label><CodeInput value={joinCode} onChange={setJoinCode} /><button className="button pink-button" disabled={joinCode.length !== 10 || pendingAction !== null} onClick={startReceiving}>{pendingAction === 'receive' ? <LoaderCircle className="spin" size={17} /> : <Link2 size={17} />} Connect</button></> : <><div className="waiting"><span className="pulse" /> Waiting for the other device…</div><button className="text-button" onClick={() => goHome()}>Cancel</button></>}</Card>}
     {step === 'send-file' && role === 'receiver' && <Card onBack={() => goHome()} title="Waiting for the sender" subtitle="The sender can now select a file to send to this device."><div className="waiting"><span className="pulse" /> Waiting for the sender to choose a file…</div><button className="text-button" onClick={() => goHome()}>Cancel</button></Card>}
     {step === 'send-file' && role !== 'receiver' && <Card onBack={() => goHome()} title="Choose a file" subtitle="Your file stays on this device until you start the upload."><DropZone inputRef={inputRef} onSelect={selectFile} file={file} /><button className="button pink-button" disabled={!file} onClick={upload}><FileUp size={17} /> Start uploading</button></Card>}

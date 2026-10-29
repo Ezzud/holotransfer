@@ -7,5 +7,5 @@ import { LoaderCircle } from 'lucide-react';
  * @returns Action card.
  */
 export function ActionCard({ icon, title, text, primary, loading, disabled, onClick }: { icon: ReactNode; title: string; text: string; primary?: boolean; loading?: boolean; disabled?: boolean; onClick: () => void }) {
-  return <button className={`action-card${primary ? ' primary' : ''}`} disabled={disabled} onClick={onClick}><div className="action-icon">{loading ? <LoaderCircle className="spin" /> : icon}</div><div><h2>{title}</h2><p>{text}</p></div><span className="arrow">→</span></button>;
+  return <button className={`action-card${primary ? ' primary' : ''}${loading ? ' loading' : ''}`} disabled={disabled} onClick={onClick}>{loading ? <LoaderCircle className="action-loader spin" size={24} /> : <><div className="action-icon">{icon}</div><div><h2>{title}</h2><p>{text}</p></div><span className="arrow">→</span></>}</button>;
 }

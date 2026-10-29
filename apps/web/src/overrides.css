@@ -3,6 +3,14 @@
   cursor: wait;
 }
 
+.action-card.loading {
+  justify-content: center;
+}
+
+.action-loader {
+  color: #ef428d;
+}
+
 .file-summary strong {
   overflow-wrap: anywhere;
   word-break: break-word;
