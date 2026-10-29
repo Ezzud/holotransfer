@@ -10,7 +10,7 @@ export function LegalPage({ type, onBack }: { type: 'privacy' | 'terms'; onBack:
   return <main className="legal-page">
     <article className="legal-content">
       <button className="back legal-back" onClick={onBack}><ArrowLeft size={17} /> Back to TransferMaster</button>
-      <div className="legal-heading"><div className="brand-mark">{isPrivacy ? <ShieldCheck size={24} /> : <Scale size={24} />}</div><div><span className="pink">TransferMaster</span><h1>{isPrivacy ? 'Privacy policy' : 'Terms of service'}</h1></div></div>
+      <div className="legal-heading"><div className="brand-mark">{isPrivacy ? <ShieldCheck size={24} /> : <Scale size={24} />}</div><div><h1>{isPrivacy ? 'Privacy policy' : 'Terms of service'}</h1></div></div>
       <p className="legal-updated">Last updated: 29 October 2026</p>
       {isPrivacy ? <PrivacyContent /> : <TermsContent />}
     </article>
