@@ -149,6 +149,7 @@ export function App() {
   const encryptionKeyPair = useRef<CryptoKeyPair | null>(null);
   const encryptionPublicKey = useRef<string | null>(null);
   const encryptionKey = useRef<CryptoKey | null>(null);
+  const peerRejectedForEncryption = useRef(false);
   const [encryptionReady, setEncryptionReady] = useState(false);
 
   useEffect(() => {
@@ -480,6 +481,7 @@ export function App() {
    */
   function openSocket(transferCode: string, role: TransferRole): void {
     setRole(role);
+    peerRejectedForEncryption.current = false;
     socket.current = connectTransfer(
       transferCode,
       clientId.current,
@@ -487,6 +489,7 @@ export function App() {
       (message, activeSocket) => handleMessage(message, activeSocket, role),
       handleChunk,
       () => {
+        if (peerRejectedForEncryption.current) return;
         if (step !== "home")
           goHome(
             `${role === "sender" ? "The receiver" : "The sender"} has disconnected. The transfer session was terminated.`,
@@ -561,18 +564,25 @@ export function App() {
     if (message.type === "e2ee-config" && typeof message.enabled === "boolean") {
       if (message.enabled !== e2eEnabled) {
         const reason =
-          role === "receiver" && !message.enabled
+          !message.enabled
             ? "Sender have end-to-end encryption disabled, either disable it too or make the sender device enable it in the settings"
-            : role === "sender" && !message.enabled
-              ? "Receiver have end-to-end encryption disabled, either disable it too or make the receiver device enable it in the settings"
-              : "The other device has end-to-end encryption enabled, either enable it too or disable it in the settings";
-        goHome(
-          reason,
-        );
-        activeSocket.close();
+            : "Sender have end-to-end encryption enabled, either enable it too or make the sender device disable it in the settings";
+        if (role === "receiver") {
+          activeSocket.send(
+            JSON.stringify({ type: "e2ee-rejected", message: reason }),
+          );
+          goHome(reason);
+        }
         return;
       }
       if (!e2eEnabled) setEncryptionReady(true);
+      return;
+    }
+    if (message.type === "e2ee-rejected" && role === "sender") {
+      peerRejectedForEncryption.current = true;
+      setSenderWaiting(false);
+      setError(message.message ?? "The receiver rejected the encryption settings.");
+      setStep("send-file");
       return;
     }
     if (message.type === "e2ee-key" && message.key) {
@@ -629,7 +639,7 @@ export function App() {
       }
     }
     if (message.type === "accepted" && role === "sender") {
-      if (!encryptionKey.current) {
+      if (e2eEnabled && !encryptionKey.current) {
         goHome("Unable to establish secure file transfer.");
         return;
       }
@@ -700,7 +710,11 @@ export function App() {
           `${role === "sender" ? "The receiver" : "The sender"} has disconnected. The transfer session was terminated.`,
       );
     }
-    if (message.type === "peer-disconnected" && role === "sender") {
+    if (
+      message.type === "peer-disconnected" &&
+      role === "sender" &&
+      !peerRejectedForEncryption.current
+    ) {
       goHome();
     }
     if (message.type === "error") {
@@ -722,6 +736,7 @@ export function App() {
     const slot = sequence % decryptQueues.current.length;
     const key = encryptionKey.current;
     const decryptPromise = decryptQueues.current[slot].then(() => {
+      if (!e2eEnabled) return chunk;
       if (!key) throw new Error("The secure transfer channel is not ready.");
       return decryptChunk(key, chunk);
     });
@@ -748,7 +763,7 @@ export function App() {
   ): Promise<void> {
     const metadata = currentFile.current;
     const key = encryptionKey.current;
-    if (!metadata || !key) {
+    if (!metadata || (e2eEnabled && !key)) {
       const message = "The secure transfer channel is not ready.";
       activeSocket.send(JSON.stringify({ type: "error", message }));
       goHome(message);
@@ -759,7 +774,9 @@ export function App() {
       if (decryptedChunkPromise) {
         chunk = await decryptedChunkPromise;
       } else {
-        chunk = await decryptChunk(key, encryptedChunk);
+        chunk = e2eEnabled
+          ? await decryptChunk(key!, encryptedChunk)
+          : encryptedChunk;
       }
     } catch (reason: unknown) {
       logger.error("Unable to decrypt received file chunk", reason);
@@ -891,7 +908,11 @@ export function App() {
    * @returns Nothing.
    */
   function upload(): void {
-    if (!file || !socket.current || !encryptionKey.current || !encryptionReady) {
+    if (
+      !file ||
+      !socket.current ||
+      (e2eEnabled && (!encryptionKey.current || !encryptionReady))
+    ) {
       logger.warn("Start uploading blocked: E2EE is not ready", {
         hasFile: Boolean(file),
         hasSocket: Boolean(socket.current),
@@ -923,7 +944,7 @@ export function App() {
   async function sendChunks(activeSocket: WebSocket): Promise<void> {
     const source = selectedFile.current;
     const key = encryptionKey.current;
-    if (!source || !key) return;
+    if (!source || (e2eEnabled && !key)) return;
     transferStartedAt.current = performance.now();
     const chunkSize = transferChunkSize;
     const windowSize = transferWindowSize;
@@ -944,11 +965,9 @@ export function App() {
         while (activeSocket.bufferedAmount > windowSize)
           await new Promise((resolve) => setTimeout(resolve, 10));
         const nextOffset = Math.min(offset + chunkSize, source.size);
+        const data = await source.slice(offset, nextOffset).arrayBuffer();
         activeSocket.send(
-          await encryptChunk(
-            key,
-            await source.slice(offset, nextOffset).arrayBuffer(),
-          ),
+          e2eEnabled ? await encryptChunk(key!, data) : data,
         );
         if (maxSpeed > 0)
           await new Promise((resolve) =>
