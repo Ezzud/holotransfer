@@ -72,9 +72,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node -e "require('node:fs').copyFileSync('apps/web/.env.tauri.example', 'apps/web/.env.tauri')"
       - run: pnpm version:sync
-      - run: node scripts/set-tauri-updater-key.mjs
-        env:
-          TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
       - run: pnpm --filter @holotransfer/desktop tauri build --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -139,11 +136,7 @@ jobs:
           java-version: "17"
       - uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
-            ndk;27.0.12077973
+          packages: platform-tools,platforms;android-35,build-tools;35.0.0,ndk;27.0.12077973
       - run: rustup target add aarch64-linux-android
       - run: pnpm install --frozen-lockfile
       - run: node -e "require('node:fs').copyFileSync('apps/web/.env.tauri.example', 'apps/web/.env.tauri')"
