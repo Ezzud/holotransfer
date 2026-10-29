@@ -409,7 +409,7 @@ export function App() {
     {step === 'transfer' && file && <Card onBack={() => goHome()} title="Transferring file" subtitle="Keep this tab open while the transfer is in progress.">
       <FileSummary file={file} />
       {senderWaiting && <div className="waiting-confirmation"><LoaderCircle className="spin" size={18} /> Waiting for the receiver to confirm…</div>}
-      <div className="progress-percentage">{timeRemaining === '00:00:00' ? (role === 'sender' ? 'Waiting for receiver' : 'Downloading...') : timeRemaining}</div>
+      <div className="progress-percentage">{timeRemaining === '00:00:00' ? (role === 'sender' ? 'Waiting for receiver' : 'Writing file...') : timeRemaining}</div>
       <div className="progress"><div style={{ width: `${progress}%` }} /></div>
       {writingFile && role === 'receiver' && <div className="write-progress indeterminate"><div /></div>}
       <div className="progress-meta">
@@ -418,7 +418,7 @@ export function App() {
             ? role === 'receiver' && writingFile
               ? 'Writing file on your device'
               : role === 'sender'
-                ? 'Receiver is writing file'
+                ? 'Receiver is writing file...'
                 : 'Downloading...'
             : `${progress}% complete`}
         </span>
