@@ -1,4 +1,10 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  basename,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 
 const assetsRoot = resolve(
@@ -17,9 +23,10 @@ const platformFiles = {
 };
 
 function findFiles(directory) {
-  return readdirSync(directory)
-    .map((name) => resolve(directory, name))
-    .filter((path) => statSync(path).isFile());
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(directory, entry.name);
+    return entry.isDirectory() ? findFiles(path) : [path];
+  });
 }
 
 const platforms = {};
@@ -33,7 +40,7 @@ for (const [platform, extensions] of Object.entries(platformFiles)) {
 
   const signaturePath = `${bundle}.sig`;
   const signature = readFileSync(signaturePath, "utf8").trim();
-  const filename = bundle.slice(directory.length + 1);
+  const filename = basename(bundle);
   platforms[platform] = {
     signature,
     url: `https://github.com/${repository}/releases/latest/download/${filename}`,
