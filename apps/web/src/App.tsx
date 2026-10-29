@@ -50,6 +50,9 @@ import type {
   TransferRole,
 } from "./types";
 
+const transferChunkSize = 4 * 1024 * 1024;
+const transferWindowSize = 64 * 1024 * 1024;
+
 /**
  * Renders the main HoloTransfer application.
  * @returns The application page.
@@ -96,6 +99,9 @@ export function App() {
   const nativeFileHandle = useRef<FileHandle | null>(null);
   const nativeSavePath = useRef<string | null>(null);
   const downloadWriteQueue = useRef(Promise.resolve());
+  const chunkAckResolver = useRef<((bytes: number) => void) | null>(null);
+  const chunkAckTarget = useRef<number | null>(null);
+  const receivedChunkCount = useRef(0);
   const receiveChunkQueue = useRef(Promise.resolve());
   const encryptionKeyPair = useRef<CryptoKeyPair | null>(null);
   const encryptionPublicKey = useRef<string | null>(null);
@@ -289,6 +295,9 @@ export function App() {
     receiveChunkQueue.current = Promise.resolve();
     transferStartedAt.current = null;
     transferredBytes.current = 0;
+    chunkAckResolver.current = null;
+    chunkAckTarget.current = null;
+    receivedChunkCount.current = 0;
     setPendingAction(null);
     setDecisionPending(false);
     setError(reason);
@@ -506,6 +515,10 @@ export function App() {
       setDecisionPending(false);
       currentFile.current = message.metadata;
       setFile(message.metadata);
+      receivedChunks.current = [];
+      receivedBytes.current = 0;
+      receivedChunkCount.current = 0;
+      downloadWriteQueue.current = Promise.resolve();
       setStep("review");
     }
 
@@ -538,6 +551,30 @@ export function App() {
       setDecisionPending(false);
       setSenderWaiting(false);
       void sendChunks(activeSocket);
+    }
+    if (message.type === "chunk-ack" && role === "sender") {
+      if (typeof message.bytes === "number") {
+        const acknowledgedBytes = Math.min(
+          message.bytes,
+          currentFile.current?.size ?? message.bytes,
+        );
+        transferredBytes.current = acknowledgedBytes;
+        const fileSize = currentFile.current?.size ?? 0;
+        if (fileSize > 0) {
+          setProgress(
+            Math.min(99, Math.round((acknowledgedBytes / fileSize) * 100)),
+          );
+        }
+        if (
+          chunkAckTarget.current !== null &&
+          acknowledgedBytes >= chunkAckTarget.current
+        ) {
+          chunkAckResolver.current?.(acknowledgedBytes);
+          chunkAckResolver.current = null;
+          chunkAckTarget.current = null;
+        }
+      }
+      return;
     }
     if (message.type === "denied") {
       logger.warn("Receiver refused file", { filename: file?.name });
@@ -643,11 +680,29 @@ export function App() {
       receivedChunks.current.push(chunk);
     }
     receivedBytes.current += chunk.byteLength;
-    transferredBytes.current = receivedBytes.current;
     transferStartedAt.current ??= performance.now();
+    try {
+      await downloadWriteQueue.current;
+    } catch (reason: unknown) {
+      logger.error("Unable to write received file chunk", reason);
+      const message = "Unable to save the received file.";
+      activeSocket.send(JSON.stringify({ type: "error", message }));
+      goHome(message);
+      return;
+    }
+    transferredBytes.current = receivedBytes.current;
     setProgress(
       Math.min(99, Math.round((receivedBytes.current / metadata.size) * 100)),
     );
+    receivedChunkCount.current += 1;
+    if (
+      receivedChunkCount.current % 2 === 0 ||
+      receivedBytes.current >= metadata.size
+    ) {
+      activeSocket.send(
+        JSON.stringify({ type: "chunk-ack", bytes: receivedBytes.current }),
+      );
+    }
     if (receivedBytes.current < metadata.size) return;
     try {
       if (downloadWriter.current) {
@@ -750,30 +805,44 @@ export function App() {
     const key = encryptionKey.current;
     if (!source || !key) return;
     transferStartedAt.current = performance.now();
-    const chunkSize = 256 * 1024;
-    for (let offset = 0; offset < source.size; offset += chunkSize) {
-      while (activeSocket.bufferedAmount > chunkSize * 4)
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      activeSocket.send(
-        await encryptChunk(
-          key,
-          await source.slice(offset, offset + chunkSize).arrayBuffer(),
-        ),
-      );
-      transferredBytes.current = Math.min(offset + chunkSize, source.size);
-      const bytesPerSecond =
-        maxSpeed *
-        (speedUnit === "GB/s"
-          ? 1024 ** 3
-          : speedUnit === "MB/s"
-            ? 1024 ** 2
-            : 1024);
-      if (maxSpeed > 0)
-        await new Promise((resolve) =>
-          setTimeout(resolve, (chunkSize / bytesPerSecond) * 1000),
+    const chunkSize = transferChunkSize;
+    const windowSize = transferWindowSize;
+    const bytesPerSecond =
+      maxSpeed *
+      (speedUnit === "GB/s"
+        ? 1024 ** 3
+        : speedUnit === "MB/s"
+          ? 1024 ** 2
+          : 1024);
+    for (let offset = 0; offset < source.size; ) {
+      const windowEnd = Math.min(offset + windowSize, source.size);
+      const acknowledgedWindow = new Promise<number>((resolve) => {
+        chunkAckTarget.current = windowEnd;
+        chunkAckResolver.current = resolve;
+      });
+      while (offset < windowEnd) {
+        while (activeSocket.bufferedAmount > windowSize)
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        const nextOffset = Math.min(offset + chunkSize, source.size);
+        activeSocket.send(
+          await encryptChunk(
+            key,
+            await source.slice(offset, nextOffset).arrayBuffer(),
+          ),
         );
+        if (maxSpeed > 0)
+          await new Promise((resolve) =>
+            setTimeout(
+              resolve,
+              ((nextOffset - offset) / bytesPerSecond) * 1000,
+            ),
+          );
+        offset = nextOffset;
+      }
+      const completedBytes = Math.min(await acknowledgedWindow, source.size);
+      transferredBytes.current = completedBytes;
       setProgress(
-        Math.min(99, Math.round(((offset + chunkSize) / source.size) * 100)),
+        Math.min(99, Math.round((completedBytes / source.size) * 100)),
       );
     }
   }

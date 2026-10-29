@@ -14,5 +14,6 @@ export type TransferMessage = {
   metadata?: FileInfo;
   message?: string;
   key?: string;
+  bytes?: number;
 };
 export type PendingAction = "send" | "receive" | null;
