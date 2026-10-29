@@ -4,7 +4,7 @@
  * @returns Promise resolving when the browser request completes.
  */
 export async function openExternalLink(url: string): Promise<void> {
-  if (import.meta.env.VITE_TAURI !== "true") {
+  if (!isTauriRuntime()) {
     window.open(url, "_blank", "noopener,noreferrer");
     return;
   }
@@ -12,3 +12,4 @@ export async function openExternalLink(url: string): Promise<void> {
   const { open } = await import("@tauri-apps/plugin-shell");
   await open(url);
 }
+import { isTauriRuntime } from "./tauriService";

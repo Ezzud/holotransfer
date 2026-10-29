@@ -11,12 +11,21 @@ export type AppPlatform =
  * @returns Platform name.
  */
 export function getPlatformLabel(): AppPlatform {
-  if (import.meta.env.VITE_TAURI !== "true") return "Web";
+  if (!isTauriRuntime()) return "Web";
   const userAgent = navigator.userAgent;
+  const platform = navigator.platform;
+  const userAgentPlatform = navigator.userAgentData?.platform ?? "";
   if (/android/i.test(userAgent)) return "Android";
   if (/iphone|ipad|ipod/i.test(userAgent)) return "iOS";
-  if (/windows/i.test(userAgent)) return "Windows";
-  if (/macintosh|mac os/i.test(userAgent)) return "macOS";
-  if (/linux/i.test(userAgent)) return "Linux";
+  if (/windows/i.test(`${userAgent} ${platform} ${userAgentPlatform}`)) {
+    return "Windows";
+  }
+  if (/macintosh|mac os|mac/i.test(`${userAgent} ${platform} ${userAgentPlatform}`)) {
+    return "macOS";
+  }
+  if (/linux/i.test(`${userAgent} ${platform} ${userAgentPlatform}`)) {
+    return "Linux";
+  }
   return "Web";
 }
+import { isTauriRuntime } from "./tauriService";

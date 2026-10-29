@@ -1,5 +1,6 @@
 import { getPlatformLabel } from "./platformService";
 import { logger } from "./logger";
+import { isTauriRuntime } from "./tauriService";
 
 const latestReleaseUrl = import.meta.env.LATEST_RELEASE_URL;
 
@@ -28,7 +29,7 @@ type ValidGitHubAsset = {
  * @returns Available release details, or null when no newer asset is available.
  */
 export async function checkForLatestRelease(): Promise<AvailableRelease | null> {
-  if (import.meta.env.VITE_TAURI !== "true" || !latestReleaseUrl) return null;
+  if (!isTauriRuntime() || !latestReleaseUrl) return null;
 
   try {
     const response = await fetch(latestReleaseUrl, {

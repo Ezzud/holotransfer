@@ -17,6 +17,9 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.LATEST_RELEASE_URL": JSON.stringify(
         environment.LATEST_RELEASE_URL ?? "",
       ),
+      "import.meta.env.VITE_TAURI": JSON.stringify(
+        mode === "tauri" ? "true" : environment.VITE_TAURI ?? "false",
+      ),
     },
     server: { port: Number(environment.VITE_PORT ?? 51739) },
   };

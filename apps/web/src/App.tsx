@@ -27,6 +27,7 @@ import {
 } from "./services/transferService";
 import { logger } from "./services/logger";
 import { openExternalLink } from "./services/externalLinkService";
+import { isTauriRuntime } from "./services/tauriService";
 import { checkForLatestRelease } from "./services/releaseService";
 import type { AvailableRelease } from "./services/releaseService";
 import {
@@ -105,7 +106,7 @@ export function App() {
     void checkForLatestRelease().then(setAvailableRelease);
   }, []);
   useEffect(() => {
-    if (import.meta.env.VITE_TAURI !== "true") return;
+    if (!isTauriRuntime()) return;
     const handleExternalLink = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;

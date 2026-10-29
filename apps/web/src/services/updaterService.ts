@@ -1,11 +1,12 @@
 import { logger } from "./logger";
+import { isTauriRuntime } from "./tauriService";
 
 /**
  * Checks for and installs a Tauri update when the frontend runs in the native shell.
  * @returns Promise resolving after the update check completes.
  */
 export async function checkForAppUpdate(): Promise<void> {
-  if (import.meta.env.VITE_TAURI !== "true") return;
+  if (!isTauriRuntime()) return;
 
   try {
     const { check } = await import("@tauri-apps/plugin-updater");

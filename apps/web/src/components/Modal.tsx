@@ -135,21 +135,29 @@ export function Modal({
                     <option>GB/s</option>
                   </select>
                 </div>
+              </div>
+              <div className="release-info">
                 {availableRelease && (
                   <div className="release-warning" role="status">
-                    <strong>New version available: v{availableRelease.version}</strong>
+                    <strong>
+                      New version available: v{availableRelease.version}
+                    </strong>
                     <button
                       type="button"
-                      onClick={() => void openExternalLink(availableRelease.downloadUrl)}
+                      onClick={() =>
+                        void openExternalLink(availableRelease.downloadUrl)
+                      }
                     >
                       Download latest version
                     </button>
                   </div>
                 )}
-                <p className="app-version">
-                  HoloTransfer v{import.meta.env.VITE_APP_VERSION ?? "unknown"} for{" "}
-                  {getPlatformLabel()}
-                </p>
+                <div className="app-version">
+                  <p>
+                    HoloTransfer v{import.meta.env.VITE_APP_VERSION ?? "unknown"} for{" "}
+                    {getPlatformLabel()}
+                  </p>
+                </div>
               </div>
             </div>
           </>

@@ -1,6 +1,7 @@
 import { CircleHelp, Heart, RefreshCw, Settings } from "lucide-react";
 import { siGithub } from "simple-icons";
 import { openExternalLink } from "../services/externalLinkService";
+import { isTauriRuntime } from "../services/tauriService";
 
 /**
  * Renders the GitHub brand mark.
@@ -32,7 +33,7 @@ export function Header({
   onHelp: () => void;
   onSettings: () => void;
 }) {
-  const isTauri = import.meta.env.VITE_TAURI === "true";
+  const isTauri = isTauriRuntime();
   return (
     <header>
       <div className="header-left">
