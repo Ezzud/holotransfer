@@ -17,7 +17,7 @@ export function LegalPage({
     <main className="legal-page">
       <article className="legal-content">
         <button className="back legal-back" onClick={onBack}>
-          <ArrowLeft size={17} /> Back to TransferMaster
+          <ArrowLeft size={17} /> Back to HoloTransfer
         </button>
         <div className="legal-heading">
           <div className="brand-mark">
@@ -44,8 +44,8 @@ function PrivacyContent() {
       <section>
         <h2>1. Scope</h2>
         <p>
-          This Privacy Policy explains what TransferMaster processes when you
-          visit the website or use a file transfer. TransferMaster is designed
+          This Privacy Policy explains what HoloTransfer processes when you
+          visit the website or use a file transfer. HoloTransfer is designed
           to relay a file between two connected devices without saving the file
           on the server.
         </p>
@@ -69,7 +69,7 @@ function PrivacyContent() {
         <h2>3. File contents</h2>
         <p>
           File bytes are relayed through the WebSocket server in memory.
-          TransferMaster does not write file contents to disk at any point, does
+          HoloTransfer does not write file contents to disk at any point, does
           not store them in a database, and does not inspect, index, or use them
           for profiling. The server holds chunks only in process memory while
           they are being forwarded; that memory is released when the transfer
@@ -79,18 +79,23 @@ function PrivacyContent() {
       <section>
         <h2>4. Transfer logs and retention</h2>
         <p>
-          Operational logs contain the sender and receiver pseudonymous client
-          identifiers, sanitized filename, file size, transfer code, status, and
-          creation and update timestamps. These records are used to troubleshoot
-          the service, enforce transfer lifecycle rules, and identify stuck or
-          expired transfers.
+          The API database stores one operational record per transfer containing
+          the sender and receiver pseudonymous client identifiers, the
+          sanitized filename, file size, ten-character transfer code, lifecycle
+          state, and creation and update timestamps. It does not store file
+          contents. The service uses these records for troubleshooting,
+          lifecycle enforcement, and identifying stuck or expired transfers.
         </p>
         <p>
-          Transfer codes expire after the configured inactivity period and
-          unfinished transfer records are marked expired when the API starts.
-          Logs are not intended to be a permanent file history. Server operators
-          may retain ordinary application logs for a limited operational period
-          according to the deployment configuration.
+          A transfer code remains active for up to one hour after its last
+          activity. After that inactivity period, the in-memory room and its
+          active connections are closed and the code can no longer be used.
+          Restarting the API marks previously unfinished database records as
+          expired. Completed and expired operational records remain in the
+          configured database until the server operator deletes or purges them;
+          this deployment does not promise automatic deletion of those records.
+          Reverse-proxy and application logs may also contain connection
+          metadata and are retained according to the deployment configuration.
         </p>
       </section>
       <section>
@@ -117,7 +122,7 @@ function PrivacyContent() {
       <section>
         <h2>7. Service providers and disclosure</h2>
         <p>
-          TransferMaster does not sell personal information. Data may be
+          HoloTransfer does not sell personal information. Data may be
           accessible to the infrastructure provider operating the deployment, or
           disclosed when required by law, to protect the service, or to
           investigate abuse. File contents are not intentionally retained as
@@ -156,8 +161,8 @@ function TermsContent() {
       <section>
         <h2>1. Acceptance</h2>
         <p>
-          By accessing or using TransferMaster, you agree to these Terms of
-          Service. If you do not agree, do not use the service. “TransferMaster”
+          By accessing or using HoloTransfer, you agree to these Terms of
+          Service. If you do not agree, do not use the service. “HoloTransfer”
           means the website, API, relay, and related software made available by
           the operator.
         </p>
@@ -167,14 +172,14 @@ function TermsContent() {
         <p>
           You may use the service only if you can legally agree to these terms
           and are permitted to share every file you submit. If you use
-          TransferMaster for an organization, you confirm that you have
+          HoloTransfer for an organization, you confirm that you have
           authority to bind that organization.
         </p>
       </section>
       <section>
         <h2>3. Acceptable use</h2>
         <p>
-          You must not use TransferMaster to transfer unlawful, fraudulent,
+          You must not use HoloTransfer to transfer unlawful, fraudulent,
           infringing, abusive, malicious, or harmful material; violate another
           person’s privacy; distribute malware; probe or attack the service;
           bypass rate limits or access controls; interfere with another
@@ -185,7 +190,7 @@ function TermsContent() {
         <h2>4. Your files and responsibility</h2>
         <p>
           You retain responsibility for your files, their legality, their
-          security, and the recipient you choose. TransferMaster does not
+          security, and the recipient you choose. HoloTransfer does not
           endorse, inspect, verify, or guarantee the accuracy, safety,
           availability, or ownership of transferred content. Do not send
           sensitive material unless you have assessed the risks and the
@@ -206,11 +211,11 @@ function TermsContent() {
       <section>
         <h2>6. File handling and no storage</h2>
         <p>
-          TransferMaster does not write file contents to server disk, database
+          HoloTransfer does not write file contents to server disk, database
           storage, or any other persistent server storage. File data exists
           temporarily in the sender’s browser, the receiver’s browser, network
           buffers, and server process memory while the transfer is active.
-          TransferMaster does not provide backup, archival storage,
+          HoloTransfer does not provide backup, archival storage,
           synchronization, or recovery. Keep your own copy until the recipient
           confirms successful receipt.
         </p>
@@ -228,7 +233,7 @@ function TermsContent() {
       <section>
         <h2>8. Disclaimer and limitation</h2>
         <p>
-          To the maximum extent permitted by law, TransferMaster is provided
+          To the maximum extent permitted by law, HoloTransfer is provided
           without warranties of uninterrupted availability, fitness for a
           particular purpose, non-infringement, or complete security. The
           operator is not responsible for lost files, failed transfers,

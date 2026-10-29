@@ -29,7 +29,7 @@ function write(level: string, message: string, details?: unknown): void {
     dateStyle: "short",
     timeStyle: "medium",
   }).format(new Date());
-  const output = `[${timestamp}] [TransferMaster] ${level} ${message}${formatDetails(details)}`;
+  const output = `[${timestamp}] [HoloTransfer] ${level} ${message}${formatDetails(details)}`;
   if (level === "ERROR") console.error(output);
   else if (level === "WARN") console.warn(output);
   else console.debug(output);

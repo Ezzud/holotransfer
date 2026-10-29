@@ -35,7 +35,7 @@ export function HomeView({
             <ShieldCheck size={22} />
           </div>
           <strong>
-            Transfer<span className="pink">Master</span>
+            Holo<span className="purple">Transfer</span>
           </strong>
         </div>
         <p>

@@ -33,7 +33,7 @@ export const config = {
   apiPrefix: normalizePath(process.env.API_PREFIX ?? "/api"),
   websocketPath: normalizePath(process.env.WS_PATH ?? "/transfer"),
   allowedOrigins: readList(
-    process.env.CLIENT_ORIGINS ?? "https://transfer.ezzud.fr",
+    process.env.CLIENT_ORIGINS ?? "https://holotransfer.app",
   ),
   databaseStorage: process.env.DATABASE_STORAGE ?? "data/transfermaster.sqlite",
   maxTransferSizeBytes: Number(

@@ -154,7 +154,7 @@ async function startServer(): Promise<void> {
   scheduleRoomCleanup();
   httpServer.listen(config.port, config.host, () => {
     const address = httpServer.address() as AddressInfo;
-    logger.info("TransferMaster API listening", {
+    logger.info("HoloTransfer API listening", {
       host: address.address,
       port: address.port,
       apiPrefix: config.apiPrefix,

@@ -8,7 +8,7 @@
 }
 
 .action-loader {
-  color: #ef428d;
+  color: var(--accent);
 }
 
 .file-summary strong {
@@ -84,6 +84,28 @@
 
 .legal-sections p:last-child {
   margin-bottom: 0;
+}
+
+.contact-options {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.contact-options a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.contact-options a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 @media (max-width: 600px) {

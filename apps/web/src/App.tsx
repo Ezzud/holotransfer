@@ -18,6 +18,7 @@ import { Header } from "./components/Header";
 import { HomeView } from "./components/HomeView";
 import { Modal } from "./components/Modal";
 import { LegalPage } from "./components/LegalPage";
+import { ContactPage } from "./components/ContactPage";
 import { getSpeedSetting } from "./services/clientStorage";
 import {
   releaseScreenWakeLock,
@@ -42,7 +43,7 @@ import type {
 } from "./types";
 
 /**
- * Renders the main TransferMaster application.
+ * Renders the main HoloTransfer application.
  * @returns The application page.
  */
 export function App() {
@@ -60,7 +61,7 @@ export function App() {
   const [decisionPending, setDecisionPending] = useState(false);
   const [error, setError] = useState("");
   const [modal, setModal] = useState<ModalType | null>(null);
-  const [legalPage, setLegalPage] = useState<"privacy" | "terms" | null>(() =>
+  const [legalPage, setLegalPage] = useState<"privacy" | "terms" | "contact" | null>(() =>
     getLegalPage(),
   );
   const [dark, setDark] = useState(localStorage.getItem("theme") !== "light");
@@ -228,6 +229,16 @@ export function App() {
   function closeLegalPage(): void {
     window.history.pushState({}, "", "/");
     setLegalPage(null);
+  }
+
+  /**
+   * Opens the contact page without reloading the application.
+   * @returns Nothing.
+   */
+  function openContactPage(): void {
+    window.history.pushState({}, "", "/contact");
+    setModal(null);
+    setLegalPage("contact");
   }
 
   /**
@@ -581,7 +592,9 @@ export function App() {
     }
   }
 
-  if (legalPage)
+  if (legalPage === "contact")
+    return <div className="app"><Header onHelp={() => setModal("help")} onSettings={() => setModal("settings")} /><ContactPage onBack={closeLegalPage} /><footer><span className="footer-credit">© 2026 HoloTransfer · Made with{" "}<Heart className="footer-heart" size={13} fill="currentColor" aria-label="love" /> by{" "}<a href="https://github.com/Ezzud" target="_blank" rel="noreferrer">Ezzud</a></span><div><button onClick={() => openLegalPage("privacy")}>Privacy</button><button onClick={() => openLegalPage("terms")}>Terms</button><button onClick={openContactPage}>Contact</button></div></footer>{modal && <Modal type={modal} dark={dark} setDark={setDark} maxSpeed={maxSpeed} setMaxSpeed={setMaxSpeed} speedUnit={speedUnit} setSpeedUnit={setSpeedUnit} onClose={() => setModal(null)} />}</div>;
+  if (legalPage === "privacy" || legalPage === "terms")
     return (
       <div className="app">
         <Header
@@ -591,7 +604,7 @@ export function App() {
         <LegalPage type={legalPage} onBack={closeLegalPage} />
         <footer>
           <span className="footer-credit">
-            © 2026 TransferMaster · Made with{" "}
+            © 2026 HoloTransfer · Made with{" "}
             <Heart
               className="footer-heart"
               size={13}
@@ -606,6 +619,7 @@ export function App() {
           <div>
             <button onClick={() => openLegalPage("privacy")}>Privacy</button>
             <button onClick={() => openLegalPage("terms")}>Terms</button>
+            <button onClick={openContactPage}>Contact</button>
           </div>
         </footer>
         {modal && (
@@ -658,7 +672,7 @@ export function App() {
                 <label>Transfer code</label>
                 <CodeInput value={joinCode} onChange={setJoinCode} />
                 <button
-                  className="button pink-button"
+                  className="button purple-button"
                   disabled={joinCode.length !== 10 || pendingAction !== null}
                   onClick={startReceiving}
                 >
@@ -705,7 +719,7 @@ export function App() {
           >
             <DropZone inputRef={inputRef} onSelect={selectFile} file={file} />
             <button
-              className="button pink-button"
+              className="button purple-button"
               disabled={!file}
               onClick={upload}
             >
@@ -732,7 +746,7 @@ export function App() {
                 Deny
               </button>
               <button
-                className="button pink-button"
+                className="button purple-button"
                 disabled={decisionPending}
                 onClick={() => decide(true)}
               >
@@ -801,7 +815,7 @@ export function App() {
               <div className="done-actions">
                 {role === "sender" && (
                   <button
-                    className="button pink-button"
+                    className="button purple-button"
                     onClick={() => {
                       setFile(null);
                       selectedFile.current = null;
@@ -854,7 +868,7 @@ export function App() {
       </main>
       <footer>
         <span className="footer-credit">
-          © 2026 TransferMaster · Made with{" "}
+          © 2026 HoloTransfer · Made with{" "}
           <Heart
             className="footer-heart"
             size={13}
@@ -869,6 +883,7 @@ export function App() {
         <div>
           <button onClick={() => openLegalPage("privacy")}>Privacy</button>
           <button onClick={() => openLegalPage("terms")}>Terms</button>
+          <button onClick={openContactPage}>Contact</button>
         </div>
       </footer>
       {modal && (
@@ -891,8 +906,9 @@ export function App() {
  * Resolves whether the browser is currently on a legal route.
  * @returns The legal route or null.
  */
-function getLegalPage(): "privacy" | "terms" | null {
+function getLegalPage(): "privacy" | "terms" | "contact" | null {
   if (window.location.pathname === "/privacy") return "privacy";
   if (window.location.pathname === "/terms") return "terms";
+  if (window.location.pathname === "/contact") return "contact";
   return null;
 }
