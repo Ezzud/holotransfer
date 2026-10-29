@@ -251,7 +251,7 @@ export function App() {
   function openSocket(transferCode: string, role: TransferRole): void {
     setRole(role);
     socket.current = connectTransfer(transferCode, clientId.current, role, (message, activeSocket) => handleMessage(message, activeSocket, role), handleChunk, () => {
-      if (step !== 'home') goHome(`${role === 'sender' ? 'The receiver' : 'The sender'} has disconnected. The transfer session was canceled.`);
+      if (step !== 'home') goHome(`${role === 'sender' ? 'The receiver' : 'The sender'} has disconnected. The transfer session was terminated.`);
     });
   }
 
@@ -288,9 +288,9 @@ export function App() {
       setStep(role === 'sender' ? 'send-file' : 'send-code');
     }
     if (message.type === 'completed') { setProgress(100); setStep('done'); }
-    if (message.type === 'expired') { goHome(message.message ?? `${role === 'sender' ? 'The receiver' : 'The sender'} has disconnected. The transfer session was canceled.`); }
+    if (message.type === 'expired') { goHome(message.message ?? `${role === 'sender' ? 'The receiver' : 'The sender'} has disconnected. The transfer session was terminated.`); }
     if (message.type === 'peer-disconnected' && role === 'sender') { goHome(); }
-    if (message.type === 'error') { goHome(message.message ?? 'The transfer session was canceled.'); }
+    if (message.type === 'error') { goHome(message.message ?? 'The transfer session was terminated.'); }
   }
 
   /**
