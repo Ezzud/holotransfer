@@ -10,6 +10,7 @@ import { HomeView } from './components/HomeView';
 import { Modal } from './components/Modal';
 import { LegalPage } from './components/LegalPage';
 import { getSpeedSetting } from './services/clientStorage';
+import { releaseScreenWakeLock, requestScreenWakeLock } from './services/screenWakeLock';
 import { connectTransfer, createTransfer, joinTransfer, registerClient, sendMetadata } from './services/transferService';
 import { logger } from './services/logger';
 import type { FileInfo, ModalType, PendingAction, SpeedUnit, Step, TransferMessage, TransferRole } from './types';
@@ -91,6 +92,21 @@ export function App() {
       setTimeRemaining(bytesPerSecond > 0 ? formatDuration(remainingBytes / bytesPerSecond) : '');
     }, 1000);
     return () => window.clearInterval(timer);
+  }, [step]);
+  useEffect(() => {
+    if (step !== 'transfer') {
+      releaseScreenWakeLock();
+      return;
+    }
+    const keepScreenAwake = () => {
+      if (document.visibilityState === 'visible') void requestScreenWakeLock();
+    };
+    void requestScreenWakeLock();
+    document.addEventListener('visibilitychange', keepScreenAwake);
+    return () => {
+      document.removeEventListener('visibilitychange', keepScreenAwake);
+      releaseScreenWakeLock();
+    };
   }, [step]);
   useEffect(() => {
     const shouldWarn = step === 'transfer';
