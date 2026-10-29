@@ -13,6 +13,10 @@
   background: var(--surface-muted);
   font-synthesis: none;
 }
+html,
+body {
+  background: var(--surface-muted);
+}
 * {
   box-sizing: border-box;
 }

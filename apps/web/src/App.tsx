@@ -30,6 +30,7 @@ import { openExternalLink } from "./services/externalLinkService";
 import { isTauriRuntime } from "./services/tauriService";
 import { checkForLatestRelease } from "./services/releaseService";
 import type { AvailableRelease } from "./services/releaseService";
+import { checkForAppUpdate } from "./services/updaterService";
 import {
   decryptChunk,
   deriveTransferKey,
@@ -103,6 +104,7 @@ export function App() {
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
   useEffect(() => {
+    void checkForAppUpdate();
     void checkForLatestRelease().then(setAvailableRelease);
   }, []);
   useEffect(() => {

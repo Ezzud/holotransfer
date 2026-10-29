@@ -9,7 +9,7 @@ export async function openExternalLink(url: string): Promise<void> {
     return;
   }
 
-  const { open } = await import("@tauri-apps/plugin-shell");
-  await open(url);
+  const { openUrl } = await import("@tauri-apps/plugin-opener");
+  await openUrl(url);
 }
 import { isTauriRuntime } from "./tauriService";

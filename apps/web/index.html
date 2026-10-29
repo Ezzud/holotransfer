@@ -19,6 +19,10 @@
   <meta name="twitter:description" content="Send any file to any other device with HoloTransfer. We don't store your files on our servers." />
   <meta name="twitter:image" content="https://holotransfer.app/og-image.png" />
   <title>HoloTransfer</title>
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("theme") === "light" ? "light" : "dark";
+  </script>
 </head>
 
 <body>

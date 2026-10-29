@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { getPlatformLabel } from "./platformService";
 import { isTauriRuntime } from "./tauriService";
 
 /**
@@ -7,6 +8,8 @@ import { isTauriRuntime } from "./tauriService";
  */
 export async function checkForAppUpdate(): Promise<void> {
   if (!isTauriRuntime()) return;
+  const platform = getPlatformLabel();
+  if (platform === "Android" || platform === "iOS") return;
 
   try {
     const { check } = await import("@tauri-apps/plugin-updater");
