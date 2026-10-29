@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import type { ClientManager } from "../managers/clientManager.js";
+import type { ClientManager } from "../managers/ClientManager.js";
 
 /**
  * Creates a controller for client lookup and connection tracking.

@@ -1,6 +1,5 @@
-import type { TransferLogManager } from "../managers/transferLogManager.js";
-import type { TransferRoom } from "../models/transferRoom.js";
-import type { TransferState } from "../models/transferTypes.js";
+import type { TransferLogManager } from "../managers/TransferLogManager.js";
+import type { TransferRoom, TransferState } from "../Types.js";
 
 /**
  * Creates the controller used by transfer lifecycle handlers.

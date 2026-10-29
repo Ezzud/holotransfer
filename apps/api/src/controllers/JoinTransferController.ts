@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import type { TransferManager } from "../managers/transferManager.js";
-import type { ClientManager } from "../managers/clientManager.js";
+import type { TransferManager } from "../managers/TransferManager.js";
+import type { ClientManager } from "../managers/ClientManager.js";
 
 /**
  * Creates an endpoint controller for receiver room joining.

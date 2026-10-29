@@ -68,10 +68,11 @@ function PrivacyContent() {
       <section>
         <h2>3. File contents</h2>
         <p>
-          File bytes are relayed through the WebSocket server in memory.
-          HoloTransfer does not write file contents to disk at any point, does
-          not store them in a database, and does not inspect, index, or use them
-          for profiling. The server holds chunks only in process memory while
+          File bytes are encrypted in the sender's browser with AES-GCM before
+          they are relayed through the WebSocket server. The receiving browser
+          decrypts them locally. HoloTransfer does not write file contents to
+          disk, store them in a database, or intentionally inspect or index
+          them. The API only holds encrypted chunks in process memory while
           they are being forwarded; that memory is released when the transfer
           ends or the connection closes.
         </p>

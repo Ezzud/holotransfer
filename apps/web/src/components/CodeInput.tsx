@@ -1,4 +1,4 @@
-import { Fragment, useRef, type KeyboardEvent } from "react";
+import { Fragment, useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 
 /**
  * Renders a grouped two-factor-style transfer code input.
@@ -37,6 +37,23 @@ export function CodeInput({
   }
 
   /**
+   * Fills all slots from a pasted code with optional separators.
+   * @param event Clipboard paste event.
+   * @returns Nothing.
+   */
+  function handlePaste(event: ClipboardEvent<HTMLInputElement>): void {
+    const pasted = event.clipboardData
+      .getData("text")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 10);
+    if (pasted.length === 0) return;
+    event.preventDefault();
+    onChange(pasted);
+    inputRefs.current[Math.min(pasted.length, 10) - 1]?.focus();
+  }
+
+  /**
    * Moves focus backward when backspace is pressed on an empty slot.
    * @param index Slot index.
    * @param event Keyboard event.
@@ -71,6 +88,7 @@ export function CodeInput({
                   autoCorrect="off"
                   spellCheck={false}
                   onChange={(event) => updateSlot(index, event.target.value)}
+                  onPaste={handlePaste}
                   onKeyDown={(event) => handleKeyDown(index, event)}
                   aria-label={`Code character ${index + 1}`}
                 />

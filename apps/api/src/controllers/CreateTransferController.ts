@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import type { TransferManager } from "../managers/transferManager.js";
-import type { ClientManager } from "../managers/clientManager.js";
+import type { TransferManager } from "../managers/TransferManager.js";
+import type { ClientManager } from "../managers/ClientManager.js";
 
 /**
  * Creates an endpoint controller for sender room creation.
@@ -38,6 +38,6 @@ export function createTransferController(
         .json({ error: "This client already has an active transfer." });
       return;
     }
-    response.status(201).json({ code: manager.createRoom().code });
+    response.status(201).json({ code: manager.createRoom(clientId).code });
   };
 }

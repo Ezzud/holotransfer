@@ -35,7 +35,7 @@ export const config = {
   allowedOrigins: readList(
     process.env.CLIENT_ORIGINS ?? "https://holotransfer.app",
   ),
-  databaseStorage: process.env.DATABASE_STORAGE ?? "data/transfermaster.sqlite",
+  databaseStorage: process.env.DATABASE_STORAGE ?? "data/database.sqlite",
   maxTransferSizeBytes: Number(
     process.env.MAX_TRANSFER_SIZE_BYTES ?? 100 * 1024 ** 3,
   ),

@@ -1,5 +1,5 @@
 {
-  "name": "@transfermaster/web",
+  "name": "@holotransfer/web",
   "private": true,
   "type": "module",
   "scripts": {

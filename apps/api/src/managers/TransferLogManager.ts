@@ -1,5 +1,4 @@
-import type { TransferRoom } from "../models/transferRoom.js";
-import type { TransferState } from "../models/transferTypes.js";
+import type { TransferRoom, TransferState } from "../Types.js";
 import { TransferLog } from "../models/TransferLog.js";
 
 /**

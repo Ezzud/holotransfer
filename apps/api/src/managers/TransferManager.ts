@@ -1,8 +1,11 @@
 import { randomInt } from "node:crypto";
 import { WebSocket } from "ws";
-import type { TransferMessage } from "../models/transferMessage.js";
-import type { TransferPeer, TransferRoom } from "../models/transferRoom.js";
-import type { TransferState } from "../models/transferTypes.js";
+import type {
+  TransferMessage,
+  TransferPeer,
+  TransferRoom,
+  TransferState,
+} from "../Types.js";
 
 /**
  * Manages active transfer rooms and protocol state.
@@ -16,12 +19,13 @@ export class TransferManager {
    * Creates a unique transfer room.
    * @returns The newly created room.
    */
-  public createRoom(): TransferRoom {
+  public createRoom(senderId: string): TransferRoom {
     let code = this.createCode();
     while (this.rooms.has(code)) code = this.createCode();
     const now = Date.now();
     const room: TransferRoom = {
       code,
+      senderId,
       createdAt: now,
       lastActivity: now,
       state: "waiting",
@@ -49,6 +53,20 @@ export class TransferManager {
     return [...this.rooms.values()].some((room) =>
       [...room.peers.values()].some((peer) => peer.id === clientId),
     );
+  }
+
+  /**
+   * Checks whether a client and role are allowed to connect to a room.
+   * @param room Transfer room.
+   * @param clientId Anonymous client identifier.
+   * @param role Requested transfer role.
+   * @returns Whether the connection is authorized and available.
+   */
+  public canAddPeer(room: TransferRoom, clientId: string, role: TransferPeer["role"]): boolean {
+    if (room.peers.size >= 2) return false;
+    if (role === "sender" && clientId !== room.senderId) return false;
+    if ([...room.peers.values()].some((peer) => peer.role === role || peer.id === clientId)) return false;
+    return true;
   }
 
   /**

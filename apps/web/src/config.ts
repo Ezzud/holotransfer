@@ -14,16 +14,9 @@ function normalizePath(value: string): string {
  * Frontend runtime/build configuration.
  */
 export const config = {
-  apiUrl: (import.meta.env.VITE_API_URL ?? "http://localhost:43827").replace(
-    /\/+$/,
-    "",
-  ),
+  apiUrl: (import.meta.env.VITE_API_URL || "").replace(/\/+$/, ""),
   apiPrefix: normalizePath(import.meta.env.VITE_API_PREFIX ?? "/api"),
-  websocketUrl: (
-    import.meta.env.VITE_WS_URL ??
-    import.meta.env.VITE_API_URL ??
-    "http://localhost:43827"
-  )
+  websocketUrl: (import.meta.env.VITE_WS_URL || "")
     .replace(/^http/, "ws")
     .replace(/\/+$/, ""),
   websocketPath: normalizePath(import.meta.env.VITE_WS_PATH ?? "/transfer"),

@@ -68,12 +68,17 @@ export function connectTransfer(
   onMessage: (message: TransferMessage, socket: WebSocket) => void,
   onBinary: (chunk: ArrayBuffer, socket: WebSocket) => void,
   onError: () => void,
+  onOpen?: (socket: WebSocket) => void,
 ): WebSocket {
   logger.info("Opening transfer socket", { code, role });
+  const websocketUrl =
+    config.websocketUrl ||
+    `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
   const socket = new WebSocket(
-    `${config.websocketUrl}${config.websocketPath}?code=${code}&client_id=${clientId}&role=${role}`,
+    `${websocketUrl}${config.websocketPath}?code=${code}&client_id=${clientId}&role=${role}`,
   );
   socket.binaryType = "arraybuffer";
+  socket.onopen = () => onOpen?.(socket);
   socket.onmessage = (event) => {
     if (typeof event.data === "string")
       onMessage(JSON.parse(event.data) as TransferMessage, socket);

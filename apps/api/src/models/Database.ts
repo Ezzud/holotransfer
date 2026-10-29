@@ -1,5 +1,5 @@
 import { Sequelize } from "sequelize";
-import { config } from "../config.js";
+import { config } from "../Config.js";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 

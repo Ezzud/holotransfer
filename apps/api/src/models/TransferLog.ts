@@ -1,16 +1,5 @@
 import { DataTypes, Model, type Sequelize } from "sequelize";
-import type { TransferState } from "./transferTypes.js";
-
-export type TransferLogAttributes = {
-  id?: number;
-  transferCode: string | null;
-  receiverId: string | null;
-  senderId: string | null;
-  filename: string | null;
-  fileSize: number | null;
-  state: TransferState;
-  updatedAt?: Date;
-};
+import type { TransferLogAttributes, TransferState } from "../Types.js";
 
 /**
  * Sequelize model for operational transfer metadata.

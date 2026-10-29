@@ -1,0 +1,38 @@
+name: holotransfer
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: 43827
+      API_PREFIX: /api
+      WS_PATH: /transfer
+      CLIENT_ORIGINS: ${CLIENT_ORIGINS:-http://localhost:${VITE_PORT:-51739}}
+      DATABASE_STORAGE: /app/data/database.sqlite
+      MAX_TRANSFER_SIZE_BYTES: ${MAX_TRANSFER_SIZE_BYTES:-107374182400}
+    ports:
+      - "${API_PORT:-43827}:43827"
+    volumes:
+      - api-data:/app/data
+    restart: unless-stopped
+
+  website:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_API_PREFIX: ${VITE_API_PREFIX:-/api}
+        VITE_WS_URL: ${VITE_WS_URL:-}
+        VITE_WS_PATH: ${VITE_WS_PATH:-/transfer}
+    ports:
+      - "${VITE_PORT:-51739}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api-data:

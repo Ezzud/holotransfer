@@ -1,10 +1,5 @@
 import { DataTypes, Model, type Sequelize } from "sequelize";
-
-export type ClientAttributes = {
-  clientId: string;
-  createdAt?: Date;
-  lastConnectedAt?: Date;
-};
+import type { ClientAttributes } from "../Types.js";
 
 /**
  * Sequelize model for anonymous browser clients.

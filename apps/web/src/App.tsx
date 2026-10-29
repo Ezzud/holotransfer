@@ -32,6 +32,14 @@ import {
   sendMetadata,
 } from "./services/transferService";
 import { logger } from "./services/logger";
+import {
+  decryptChunk,
+  deriveTransferKey,
+  encryptChunk,
+  exportPublicKey,
+  generateTransferKeyPair,
+  importPublicKey,
+} from "./services/encryptionService";
 import type {
   FileInfo,
   ModalType,
@@ -81,6 +89,11 @@ export function App() {
   const transferredBytes = useRef(0);
   const downloadWriter = useRef<FileSystemWritableFileStream | null>(null);
   const downloadWriteQueue = useRef(Promise.resolve());
+  const receiveChunkQueue = useRef(Promise.resolve());
+  const encryptionKeyPair = useRef<CryptoKeyPair | null>(null);
+  const encryptionPublicKey = useRef<string | null>(null);
+  const encryptionKey = useRef<CryptoKey | null>(null);
+  const [encryptionReady, setEncryptionReady] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -140,6 +153,14 @@ export function App() {
     }, 1000);
     return () => window.clearInterval(timer);
   }, [step]);
+  useEffect(() => {
+    if (step === "send-file" && role === "sender" && file && !encryptionReady) {
+      logger.info("Start uploading is waiting for E2EE handshake", {
+        hasSocket: Boolean(socket.current),
+        socketState: socket.current?.readyState,
+      });
+    }
+  }, [step, role, file, encryptionReady]);
   useEffect(() => {
     if (step !== "transfer") return;
     const keepalive = window.setInterval(() => {
@@ -203,6 +224,11 @@ export function App() {
     setTransferSpeed("0 B/s");
     setTimeRemaining("");
     setWritingFile(false);
+    setEncryptionReady(false);
+    encryptionKeyPair.current = null;
+    encryptionPublicKey.current = null;
+    encryptionKey.current = null;
+    receiveChunkQueue.current = Promise.resolve();
     transferStartedAt.current = null;
     transferredBytes.current = 0;
     setPendingAction(null);
@@ -343,7 +369,48 @@ export function App() {
             `${role === "sender" ? "The receiver" : "The sender"} has disconnected. The transfer session was terminated.`,
           );
       },
+      (activeSocket) => {
+        void initializeEncryption(activeSocket);
+      },
     );
+  }
+
+  /**
+   * Generates local transfer keys and sends the public key through the relay.
+   * @param activeSocket Connected transfer socket.
+   * @returns Promise resolving after the public key is sent.
+   */
+  async function initializeEncryption(activeSocket: WebSocket): Promise<void> {
+    try {
+      const keyPair = await generateTransferKeyPair();
+      encryptionKeyPair.current = keyPair;
+      encryptionPublicKey.current = await exportPublicKey(keyPair.publicKey);
+      sendEncryptionPublicKey(activeSocket, "socket-open");
+    } catch (reason: unknown) {
+      logger.error("Unable to initialize end-to-end encryption", reason);
+      goHome("Unable to initialize secure file transfer.");
+    }
+
+  }
+
+  /**
+   * Sends the local public key after the peer is available.
+   * @param activeSocket Connected transfer socket.
+   * @param reason Handshake event that triggered the retry.
+   * @returns Nothing.
+   */
+  function sendEncryptionPublicKey(activeSocket: WebSocket, reason: string): void {
+    const key = encryptionPublicKey.current;
+    if (!key || activeSocket.readyState !== WebSocket.OPEN) {
+      logger.warn("Unable to send E2EE public key", {
+        reason,
+        hasPublicKey: Boolean(key),
+        socketState: activeSocket.readyState,
+      });
+      return;
+    }
+    logger.info("Sending E2EE public key", { reason });
+    activeSocket.send(JSON.stringify({ type: "e2ee-key", key }));
   }
 
   /**
@@ -358,10 +425,19 @@ export function App() {
     activeSocket: WebSocket,
     role: TransferRole,
   ): void {
-    if (message.type === "connected" && role === "receiver")
+    if (message.type === "e2ee-key" && message.key) {
+      logger.info("Received E2EE public key");
+      void establishEncryption(message.key);
+      return;
+    }
+    if (message.type === "connected" && role === "receiver") {
+      sendEncryptionPublicKey(activeSocket, "receiver-connected");
       setStep("send-file");
-    if (message.type === "peer-connected" && role === "sender")
-      setStep("send-file");
+    }
+    if (message.type === "peer-connected") {
+      sendEncryptionPublicKey(activeSocket, "peer-connected");
+      if (role === "sender") setStep("send-file");
+    }
     if (
       message.type === "metadata" &&
       role === "receiver" &&
@@ -372,7 +448,32 @@ export function App() {
       setFile(message.metadata);
       setStep("review");
     }
+
+    /**
+     * Derives the shared encryption key from the remote public key.
+     * @param encodedKey Base64 encoded remote public key.
+     * @returns Promise resolving after key derivation.
+     */
+    async function establishEncryption(encodedKey: string): Promise<void> {
+      const keyPair = encryptionKeyPair.current;
+      if (!keyPair) return;
+      try {
+        encryptionKey.current = await deriveTransferKey(
+          keyPair,
+          await importPublicKey(encodedKey),
+        );
+        setEncryptionReady(true);
+        logger.success("End-to-end encryption established");
+      } catch (reason: unknown) {
+        logger.error("Unable to establish end-to-end encryption", reason);
+        goHome("Unable to establish secure file transfer.");
+      }
+    }
     if (message.type === "accepted" && role === "sender") {
+      if (!encryptionKey.current) {
+        goHome("Unable to establish secure file transfer.");
+        return;
+      }
       logger.success("Receiver confirmed file", { filename: file?.name });
       setDecisionPending(false);
       setSenderWaiting(false);
@@ -395,6 +496,20 @@ export function App() {
     if (message.type === "completed") {
       setProgress(100);
       setStep("done");
+    }
+    if (message.type === "metadata-error") {
+      logger.warn("File metadata rejected; keeping transfer connection open", {
+        message: message.message,
+      });
+      setFile(null);
+      selectedFile.current = null;
+      currentFile.current = null;
+      setSenderWaiting(false);
+      setProgress(0);
+      setTimeRemaining("");
+      setError(`${message.message ?? "This file cannot be sent."} Please choose another file.`);
+      setStep(role === "sender" ? "send-file" : "send-file");
+      return;
     }
     if (message.type === "expired") {
       goHome(
@@ -420,8 +535,40 @@ export function App() {
     chunk: ArrayBuffer,
     activeSocket: WebSocket,
   ): Promise<void> {
+    receiveChunkQueue.current = receiveChunkQueue.current.then(async () => {
+      await processEncryptedChunk(chunk, activeSocket);
+    });
+    await receiveChunkQueue.current;
+  }
+
+  /**
+   * Decrypts and processes one received file chunk in order.
+   * @param encryptedChunk Encrypted file chunk.
+   * @param activeSocket Connected transfer socket.
+   * @returns Promise resolving after the chunk is processed.
+   */
+  async function processEncryptedChunk(
+    encryptedChunk: ArrayBuffer,
+    activeSocket: WebSocket,
+  ): Promise<void> {
     const metadata = currentFile.current;
-    if (!metadata) return;
+    const key = encryptionKey.current;
+    if (!metadata || !key) {
+      const message = "The secure transfer channel is not ready.";
+      activeSocket.send(JSON.stringify({ type: "error", message }));
+      goHome(message);
+      return;
+    }
+    let chunk: ArrayBuffer;
+    try {
+      chunk = await decryptChunk(key, encryptedChunk);
+    } catch (reason: unknown) {
+      logger.error("Unable to decrypt received file chunk", reason);
+      const message = "The received file failed security verification.";
+      activeSocket.send(JSON.stringify({ type: "error", message }));
+      goHome(message);
+      return;
+    }
     if (downloadWriter.current) {
       const writer = downloadWriter.current;
       downloadWriteQueue.current = downloadWriteQueue.current.then(async () => {
@@ -493,7 +640,17 @@ export function App() {
    * @returns Nothing.
    */
   function upload(): void {
-    if (!file || !socket.current) return;
+    if (!file || !socket.current || !encryptionKey.current || !encryptionReady) {
+      logger.warn("Start uploading blocked: E2EE is not ready", {
+        hasFile: Boolean(file),
+        hasSocket: Boolean(socket.current),
+        socketState: socket.current?.readyState,
+        hasEncryptionKey: Boolean(encryptionKey.current),
+        encryptionReady,
+      });
+      setError("Secure transfer is still initializing. Please try again.");
+      return;
+    }
     sendMetadata(socket.current, file);
     logger.info("Waiting for receiver confirmation", {
       filename: file.name,
@@ -514,14 +671,18 @@ export function App() {
    */
   async function sendChunks(activeSocket: WebSocket): Promise<void> {
     const source = selectedFile.current;
-    if (!source) return;
+    const key = encryptionKey.current;
+    if (!source || !key) return;
     transferStartedAt.current = performance.now();
     const chunkSize = 256 * 1024;
     for (let offset = 0; offset < source.size; offset += chunkSize) {
       while (activeSocket.bufferedAmount > chunkSize * 4)
         await new Promise((resolve) => setTimeout(resolve, 10));
       activeSocket.send(
-        await source.slice(offset, offset + chunkSize).arrayBuffer(),
+        await encryptChunk(
+          key,
+          await source.slice(offset, offset + chunkSize).arrayBuffer(),
+        ),
       );
       transferredBytes.current = Math.min(offset + chunkSize, source.size);
       const bytesPerSecond =
@@ -549,6 +710,10 @@ export function App() {
   async function decide(accepted: boolean): Promise<void> {
     if (!socket.current) return;
     if (decisionPending) return;
+    if (accepted && role === "receiver" && !encryptionReady) {
+      setError("Secure transfer is still initializing. Please try again.");
+      return;
+    }
     setDecisionPending(true);
     const saveFilePicker = (
       window as Window & {
@@ -720,7 +885,7 @@ export function App() {
             <DropZone inputRef={inputRef} onSelect={selectFile} file={file} />
             <button
               className="button purple-button"
-              disabled={!file}
+              disabled={!file || !encryptionReady}
               onClick={upload}
             >
               <FileUp size={17} /> Start uploading

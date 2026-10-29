@@ -7,7 +7,7 @@ const colors = {
   cyan: "\x1b[36m",
 } as const;
 
-type LogDetails = Record<string, unknown>;
+import type { LogDetails } from "./Types.js";
 
 /**
  * Formats structured details as readable key-value pairs.
