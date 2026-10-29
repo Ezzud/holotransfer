@@ -61,7 +61,7 @@ jobs:
           - os: windows-latest
             platform: windows-x86_64
             config: tauri.windows.conf.json
-          - os: macos-13
+          - os: macos-latest
             platform: darwin-x86_64
             config: tauri.macos.conf.json
     runs-on: ${{ matrix.os }}
