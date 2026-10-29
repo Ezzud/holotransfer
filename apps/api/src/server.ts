@@ -32,7 +32,9 @@ const app = express();
 app.set('trust proxy', 1);
 const httpServer = createServer(app);
 const websocketServer = new WebSocketServer({ server: httpServer, path: config.websocketPath });
-const socketHealth = new WeakMap<WebSocket, boolean>();
+const heartbeatIntervalMs = 20_000;
+const heartbeatMissLimit = 3;
+const socketHealth = new WeakMap<WebSocket, { missedPongs: number; code: string; clientId: string; role: TransferRole }>();
 
 /**
  * Configures Express middleware and transfer routes.
@@ -85,14 +87,25 @@ function scheduleRoomCleanup(): void {
 function scheduleWebSocketHeartbeat(): void {
   setInterval(() => {
     for (const socket of websocketServer.clients) {
-      if (socketHealth.get(socket) === false) {
+      if (socket.readyState !== WebSocket.OPEN) continue;
+      const health = socketHealth.get(socket);
+      if (!health) continue;
+      health.missedPongs += 1;
+      if (health.missedPongs >= heartbeatMissLimit) {
+        logger.warn('WebSocket socket terminated by heartbeat timeout', {
+          code: health.code,
+          clientId: health.clientId,
+          role: health.role,
+          missedPongs: health.missedPongs,
+          timeoutMs: heartbeatIntervalMs * heartbeatMissLimit,
+          action: 'terminate'
+        });
         socket.terminate();
         continue;
       }
-      socketHealth.set(socket, false);
       socket.ping();
     }
-  }, 20_000).unref();
+  }, heartbeatIntervalMs).unref();
 }
 
 /**
@@ -153,8 +166,11 @@ async function handleConnection(socket: import('ws').WebSocket, request: import(
     return;
   }
   logger.info('WebSocket peer connected', { code, clientId, role });
-  socketHealth.set(socket, true);
-  socket.on('pong', () => socketHealth.set(socket, true));
+  socketHealth.set(socket, { missedPongs: 0, code, clientId, role });
+  socket.on('pong', () => {
+    const health = socketHealth.get(socket);
+    if (health) health.missedPongs = 0;
+  });
   socket.send(JSON.stringify({ type: 'connected', role }));
   if (room.peers.size === 2) {
     logger.success('Transfer devices connected', { code });
@@ -201,13 +217,13 @@ async function handleConnection(socket: import('ws').WebSocket, request: import(
   });
   socket.on('close', (closeCode, closeReason) => {
     if (role === 'sender' && manager.getRoom(code) === room && room.peers.size > 1) {
-      logger.warn('Sender connection closed; expiring transfer code', { code, clientId });
+      logger.warn('Sender connection closed; expiring transfer code', { code, clientId, closeCode, closeReason: closeReason.toString() });
       void logController(room, 'expired');
       manager.expireRoom(room, 'The sender disconnected. This transfer has ended.');
       return;
     }
     if (role === 'receiver' && manager.getRoom(code) === room && room.peers.size > 1) {
-      logger.warn('Receiver connection closed; expiring transfer code', { code, clientId });
+      logger.warn('Receiver connection closed; expiring transfer code', { code, clientId, closeCode, closeReason: closeReason.toString() });
       void logController(room, 'expired');
       manager.expireRoom(room, 'The receiver disconnected. This transfer has ended.');
       return;
