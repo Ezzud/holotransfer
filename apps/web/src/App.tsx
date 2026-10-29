@@ -55,6 +55,26 @@ const transferWindowSize = 32 * 1024 * 1024;
 const browserWriteBatchSize = 32 * 1024 * 1024;
 const nativeWriteBatchSize = 32 * 1024 * 1024;
 
+function isAndroidTransferRuntime(): boolean {
+  return isTauriRuntime() && /android/i.test(navigator.userAgent);
+}
+
+function getTransferChunkSize(): number {
+  return isAndroidTransferRuntime() ? 1024 * 1024 : transferChunkSize;
+}
+
+function getTransferWindowSize(): number {
+  return isAndroidTransferRuntime() ? 8 * 1024 * 1024 : transferWindowSize;
+}
+
+function getNativeWriteBatchSize(): number {
+  return isAndroidTransferRuntime() ? 4 * 1024 * 1024 : nativeWriteBatchSize;
+}
+
+function getDecryptQueueCount(): number {
+  return isAndroidTransferRuntime() ? 1 : 2;
+}
+
 function combineChunks(
   chunks: ArrayBuffer[],
   totalBytes: number,
@@ -153,13 +173,14 @@ export function App() {
   const pendingWriteBytes = useRef(0);
   const writtenFileBytes = useRef(0);
   const writeProgressLastUpdatedAt = useRef(0);
+  const transferProgressLastUpdatedAt = useRef(0);
   const downloadWriteQueue = useRef(Promise.resolve());
   const chunkAckResolver = useRef<((bytes: number) => void) | null>(null);
   const chunkAckTarget = useRef<number | null>(null);
   const receivedChunkCount = useRef(0);
   const receivedDecryptSequence = useRef(0);
   const decryptQueues = useRef<Promise<void>[]>(
-    Array.from({ length: 2 }, () => Promise.resolve()),
+    Array.from({ length: getDecryptQueueCount() }, () => Promise.resolve()),
   );
   const receiveChunkQueue = useRef(Promise.resolve());
   const encryptionKeyPair = useRef<CryptoKeyPair | null>(null);
@@ -366,7 +387,7 @@ export function App() {
     pendingWriteChunks.current = [];
     pendingWriteBytes.current = 0;
     writtenFileBytes.current = 0;
-    decryptQueues.current = Array.from({ length: 2 }, () =>
+    decryptQueues.current = Array.from({ length: getDecryptQueueCount() }, () =>
       Promise.resolve(),
     );
     setPendingAction(null);
@@ -644,11 +665,12 @@ export function App() {
       receivedBytes.current = 0;
       receivedChunkCount.current = 0;
       receivedDecryptSequence.current = 0;
-      decryptQueues.current = Array.from({ length: 2 }, () =>
+      decryptQueues.current = Array.from({ length: getDecryptQueueCount() }, () =>
         Promise.resolve(),
       );
       downloadWriteQueue.current = Promise.resolve();
       writeProgressLastUpdatedAt.current = 0;
+      transferProgressLastUpdatedAt.current = 0;
       setWriteProgress(0);
       setStep("review");
     }
@@ -826,7 +848,7 @@ export function App() {
       if (
         pendingWriteBytes.current >=
           (nativeFileHandle.current
-            ? nativeWriteBatchSize
+            ? getNativeWriteBatchSize()
             : browserWriteBatchSize) ||
         receivedBytes.current + chunk.byteLength >= metadata.size
       ) {
@@ -864,9 +886,18 @@ export function App() {
     receivedBytes.current += chunk.byteLength;
     transferStartedAt.current ??= performance.now();
     transferredBytes.current = receivedBytes.current;
-    setProgress(
-      Math.min(99, Math.round((receivedBytes.current / metadata.size) * 100)),
+    const nextTransferProgress = Math.min(
+      99,
+      Math.round((receivedBytes.current / metadata.size) * 100),
     );
+    const now = performance.now();
+    if (
+      !isAndroidTransferRuntime() ||
+      now - transferProgressLastUpdatedAt.current >= 100
+    ) {
+      transferProgressLastUpdatedAt.current = now;
+      setProgress(nextTransferProgress);
+    }
     receivedChunkCount.current += 1;
     if (
       receivedChunkCount.current % 2 === 0 ||
@@ -986,8 +1017,8 @@ export function App() {
     const key = encryptionKey.current;
     if (!source || (e2eEnabled && !key)) return;
     transferStartedAt.current = performance.now();
-    const chunkSize = transferChunkSize;
-    const windowSize = transferWindowSize;
+    const chunkSize = getTransferChunkSize();
+    const windowSize = getTransferWindowSize();
     const bytesPerSecond =
       maxSpeed *
       (speedUnit === "GB/s"

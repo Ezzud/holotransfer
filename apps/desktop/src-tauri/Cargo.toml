@@ -1,6 +1,6 @@
 [package]
 name = "holotransfer"
-version = "0.2.4"
+version = "0.2.5"
 description = "Private encrypted file transfers between your devices"
 authors = ["Ezzud"]
 edition = "2021"
