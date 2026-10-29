@@ -52,6 +52,7 @@ import type {
 
 const transferChunkSize = 4 * 1024 * 1024;
 const transferWindowSize = 64 * 1024 * 1024;
+const nativeWriteBatchSize = 16 * 1024 * 1024;
 
 /**
  * Renders the main HoloTransfer application.
@@ -71,6 +72,7 @@ export function App() {
   const [transferSpeed, setTransferSpeed] = useState("0 B/s");
   const [timeRemaining, setTimeRemaining] = useState("");
   const [writingFile, setWritingFile] = useState(false);
+  const [writeProgress, setWriteProgress] = useState(0);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [decisionPending, setDecisionPending] = useState(false);
   const [error, setError] = useState("");
@@ -98,10 +100,17 @@ export function App() {
   const downloadWriter = useRef<FileSystemWritableFileStream | null>(null);
   const nativeFileHandle = useRef<FileHandle | null>(null);
   const nativeSavePath = useRef<string | null>(null);
+  const pendingWriteChunks = useRef<ArrayBuffer[]>([]);
+  const pendingWriteBytes = useRef(0);
+  const writtenFileBytes = useRef(0);
   const downloadWriteQueue = useRef(Promise.resolve());
   const chunkAckResolver = useRef<((bytes: number) => void) | null>(null);
   const chunkAckTarget = useRef<number | null>(null);
   const receivedChunkCount = useRef(0);
+  const receivedDecryptSequence = useRef(0);
+  const decryptQueues = useRef<Promise<void>[]>(
+    Array.from({ length: 4 }, () => Promise.resolve()),
+  );
   const receiveChunkQueue = useRef(Promise.resolve());
   const encryptionKeyPair = useRef<CryptoKeyPair | null>(null);
   const encryptionPublicKey = useRef<string | null>(null);
@@ -272,6 +281,9 @@ export function App() {
     socket.current = null;
     if (nativeFileHandle.current) void nativeFileHandle.current.close();
     nativeFileHandle.current = null;
+    pendingWriteChunks.current = [];
+    pendingWriteBytes.current = 0;
+    writtenFileBytes.current = 0;
     selectedFile.current = null;
     currentFile.current = null;
     receivedChunks.current = [];
@@ -287,6 +299,7 @@ export function App() {
     setTransferSpeed("0 B/s");
     setTimeRemaining("");
     setWritingFile(false);
+    setWriteProgress(0);
     setEncryptionReady(false);
     setNavigationDirection(direction);
     encryptionKeyPair.current = null;
@@ -298,6 +311,13 @@ export function App() {
     chunkAckResolver.current = null;
     chunkAckTarget.current = null;
     receivedChunkCount.current = 0;
+    receivedDecryptSequence.current = 0;
+    pendingWriteChunks.current = [];
+    pendingWriteBytes.current = 0;
+    writtenFileBytes.current = 0;
+    decryptQueues.current = Array.from({ length: 4 }, () =>
+      Promise.resolve(),
+    );
     setPendingAction(null);
     setDecisionPending(false);
     setError(reason);
@@ -518,7 +538,12 @@ export function App() {
       receivedChunks.current = [];
       receivedBytes.current = 0;
       receivedChunkCount.current = 0;
+      receivedDecryptSequence.current = 0;
+      decryptQueues.current = Array.from({ length: 4 }, () =>
+        Promise.resolve(),
+      );
       downloadWriteQueue.current = Promise.resolve();
+      setWriteProgress(0);
       setStep("review");
     }
 
@@ -632,8 +657,19 @@ export function App() {
     chunk: ArrayBuffer,
     activeSocket: WebSocket,
   ): Promise<void> {
+    const sequence = receivedDecryptSequence.current++;
+    const slot = sequence % decryptQueues.current.length;
+    const key = encryptionKey.current;
+    const decryptPromise = decryptQueues.current[slot].then(() => {
+      if (!key) throw new Error("The secure transfer channel is not ready.");
+      return decryptChunk(key, chunk);
+    });
+    decryptQueues.current[slot] = decryptPromise.then(
+      () => undefined,
+      () => undefined,
+    );
     receiveChunkQueue.current = receiveChunkQueue.current.then(async () => {
-      await processEncryptedChunk(chunk, activeSocket);
+      await processEncryptedChunk(chunk, activeSocket, decryptPromise);
     });
     await receiveChunkQueue.current;
   }
@@ -647,6 +683,7 @@ export function App() {
   async function processEncryptedChunk(
     encryptedChunk: ArrayBuffer,
     activeSocket: WebSocket,
+    decryptedChunkPromise?: Promise<ArrayBuffer>,
   ): Promise<void> {
     const metadata = currentFile.current;
     const key = encryptionKey.current;
@@ -658,7 +695,11 @@ export function App() {
     }
     let chunk: ArrayBuffer;
     try {
-      chunk = await decryptChunk(key, encryptedChunk);
+      if (decryptedChunkPromise) {
+        chunk = await decryptedChunkPromise;
+      } else {
+        chunk = await decryptChunk(key, encryptedChunk);
+      }
     } catch (reason: unknown) {
       logger.error("Unable to decrypt received file chunk", reason);
       const message = "The received file failed security verification.";
@@ -666,16 +707,39 @@ export function App() {
       goHome(message);
       return;
     }
-    if (downloadWriter.current) {
-      const writer = downloadWriter.current;
-      downloadWriteQueue.current = downloadWriteQueue.current.then(async () => {
-        await writer.write(chunk);
-      });
-    } else if (nativeFileHandle.current) {
-      const writer = nativeFileHandle.current;
-      downloadWriteQueue.current = downloadWriteQueue.current.then(async () => {
-        await writer.write(new Uint8Array(chunk));
-      });
+    if (downloadWriter.current || nativeFileHandle.current) {
+      pendingWriteChunks.current.push(chunk);
+      pendingWriteBytes.current += chunk.byteLength;
+      if (
+        pendingWriteBytes.current >= nativeWriteBatchSize ||
+        receivedBytes.current + chunk.byteLength >= metadata.size
+      ) {
+        const batch = pendingWriteChunks.current;
+        pendingWriteChunks.current = [];
+        pendingWriteBytes.current = 0;
+        const browserWriter = downloadWriter.current;
+        const nativeWriter = nativeFileHandle.current;
+        downloadWriteQueue.current = downloadWriteQueue.current.then(async () => {
+          if (browserWriter) {
+            await browserWriter.write(new Blob(batch));
+          } else if (nativeWriter) {
+            const data = await new Blob(batch).arrayBuffer();
+            await nativeWriter.write(new Uint8Array(data));
+          }
+          writtenFileBytes.current += batch.reduce(
+            (total, item) => total + item.byteLength,
+            0,
+          );
+          setWriteProgress(
+            Math.min(
+              100,
+              Math.round(
+                (writtenFileBytes.current / metadata.size) * 100,
+              ),
+            ),
+          );
+        });
+      }
     } else {
       receivedChunks.current.push(chunk);
     }
@@ -699,19 +763,23 @@ export function App() {
       if (downloadWriter.current) {
         setProgress(100);
         setTimeRemaining("00:00:00");
+        setWriteProgress(0);
         setWritingFile(true);
         await downloadWriteQueue.current;
         await downloadWriter.current.close();
         downloadWriter.current = null;
+        setWriteProgress(100);
         setWritingFile(false);
       } else if (nativeFileHandle.current) {
         setProgress(100);
         setTimeRemaining("00:00:00");
+        setWriteProgress(0);
         setWritingFile(true);
         await downloadWriteQueue.current;
         await nativeFileHandle.current.close();
         nativeFileHandle.current = null;
         nativeSavePath.current = null;
+        setWriteProgress(100);
         setWritingFile(false);
       } else {
         const url = URL.createObjectURL(
@@ -1040,6 +1108,7 @@ export function App() {
               transferSpeed={transferSpeed}
               senderWaiting={senderWaiting}
               writingFile={writingFile}
+              writeProgress={writeProgress}
               onBack={() =>
                 goHome("", role === "receiver" ? "send" : "receive")
               }

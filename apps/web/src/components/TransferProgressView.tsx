@@ -11,6 +11,7 @@ type TransferProgressViewProps = {
   transferSpeed: string;
   senderWaiting: boolean;
   writingFile: boolean;
+  writeProgress: number;
   onBack: () => void;
 };
 
@@ -27,6 +28,7 @@ export function TransferProgressView({
   transferSpeed,
   senderWaiting,
   writingFile,
+  writeProgress,
   onBack,
 }: TransferProgressViewProps) {
   return (
@@ -43,7 +45,9 @@ export function TransferProgressView({
         </div>
       )}
       <div className="progress-percentage">
-        {timeRemaining === "00:00:00"
+        {writingFile && role === "receiver"
+          ? `${writeProgress}% written`
+          : timeRemaining === "00:00:00"
           ? role === "sender"
             ? "Waiting for receiver"
             : "Writing file..."
@@ -53,15 +57,15 @@ export function TransferProgressView({
         <div style={{ width: `${progress}%` }} />
       </div>
       {writingFile && role === "receiver" && (
-        <div className="write-progress indeterminate">
-          <div />
+        <div className="write-progress">
+          <div style={{ width: `${writeProgress}%` }} />
         </div>
       )}
       <div className="progress-meta">
         <span>
           {timeRemaining === "00:00:00"
             ? role === "receiver" && writingFile
-              ? "Writing file on your device"
+              ? `Writing file on your device (${writeProgress}%)`
               : role === "sender"
                 ? "Receiver is writing file..."
                 : "Downloading..."
